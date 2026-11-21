@@ -1,0 +1,329 @@
+import AppKit
+import Citadel
+import Foundation
+import NIOCore
+import NIOSSH
+
+/// Headless connection check, usable without the UI:
+///   MacTermPlus --selftest <host> <port> <user> <keyPath | password:SECRET>
+/// Exercises the same code paths as the app: key/password auth, PTY shell, SFTP list/upload/download/delete.
+enum SelfTest {
+    static func runIfRequested() {
+        let args = CommandLine.arguments
+        if let h = args.firstIndex(of: "--export-help"), args.count > h + 1 {
+            try? HelpContent.markdown().write(toFile: args[h + 1], atomically: true, encoding: .utf8)
+            exit(0)
+        }
+        if let k = args.firstIndex(of: "--sync-once"), args.count > k + 1 {
+            // Tests: MTP_DATA_DIR=<device dir> MacTermPlus --sync-once <folder> [add:<name>] [delete:<name>]
+            let done = DispatchSemaphore(value: 0)
+            Task { @MainActor in
+                let store = SessionStore()
+                for a in args where a.hasPrefix("add:") {
+                    store.upsert(SessionProfile(name: String(a.dropFirst(4)), host: String(a.dropFirst(4)) + ".example", username: "u"))
+                }
+                for a in args where a.hasPrefix("delete:") {
+                    if let p = store.sessions.first(where: { $0.name == String(a.dropFirst(7)) }) { store.delete(p) }
+                }
+                let m = SyncManager.shared
+                m.folderPath = args[k + 1]
+                m.attach(store: store)
+                m.enabled = true
+                await m.syncNow()
+                print("SYNC \(m.lastError ?? "ok") | \(m.lastSummary) | sessions=\(store.sessions.map(\.name).sorted().joined(separator: ","))")
+                done.signal()
+            }
+            while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            exit(0)
+        }
+        if let k = args.firstIndex(of: "--tunnel-test"), args.count > k + 6 {
+            // Tests: MTP_DATA_DIR=… MacTermPlus --tunnel-test host sshPort user keyPath localPort targetPort
+            let done = DispatchSemaphore(value: 0)
+            Task { @MainActor in
+                let store = SessionStore()
+                var p = SessionProfile(name: "tunnel-test", host: args[k + 1], port: Int(args[k + 2]) ?? 22, username: args[k + 3])
+                p.auth = .privateKey; p.keyPath = args[k + 4]
+                store.upsert(p)
+                var t = TunnelConfig()
+                t.sessionID = p.id; t.localPort = Int(args[k + 5]) ?? 18080; t.remoteHost = "127.0.0.1"; t.remotePort = Int(args[k + 6]) ?? 8000
+                TunnelManager.shared.upsert(t)
+                TunnelManager.shared.start(t, store: store)
+                for _ in 0..<100 {
+                    if case .running = TunnelManager.shared.state(t) { break }
+                    if case .failed = TunnelManager.shared.state(t) { break }
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+                print("TUNNEL STATE \(TunnelManager.shared.state(t))")
+                // Fetch through the tunnel twice (two separate connections).
+                for i in 1...2 {
+                    let url = URL(string: "http://127.0.0.1:\(t.localPort)/hello.txt")!
+                    if let (data, _) = try? await URLSession.shared.data(from: url) {
+                        print("FETCH \(i): \(String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))")
+                    } else { print("FETCH \(i): failed") }
+                }
+                TunnelManager.shared.stop(t)
+                done.signal()
+            }
+            while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            exit(0)
+        }
+        if args.contains("--icloud-keychain-test") {
+            let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.macterm-plus.probe",
+                                    kSecAttrAccount as String: "probe", kSecAttrSynchronizable as String: true,
+                                    kSecValueData as String: Data("x".utf8)]
+            let add = SecItemAdd(q as CFDictionary, nil)
+            print("SYNC ADD status=\(add) \(SecCopyErrorMessageString(add, nil) as String? ?? "")")
+            SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.macterm-plus.probe",
+                           kSecAttrSynchronizable as String: kSecAttrSynchronizableAny] as CFDictionary)
+            let q2: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.macterm-plus.probe",
+                                     kSecAttrAccount as String: "probe", kSecUseDataProtectionKeychain as String: true,
+                                     kSecValueData as String: Data("x".utf8)]
+            let add2 = SecItemAdd(q2 as CFDictionary, nil)
+            print("DATA-PROTECTION ADD status=\(add2) \(SecCopyErrorMessageString(add2, nil) as String? ?? "")")
+            SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.macterm-plus.probe",
+                           kSecUseDataProtectionKeychain as String: true] as CFDictionary)
+            exit(0)
+        }
+        if args.contains("--distro-test") {
+            let cases: [(String, String, String)] = [
+                ("ubuntu", "debian", "Ubuntu 22.04.4 LTS"), ("debian", "", "Debian GNU/Linux 12 (bookworm)"),
+                ("raspbian", "debian", "Raspbian GNU/Linux 11"), ("debian", "", "Raspberry Pi OS (64-bit)"),
+                ("rocky", "rhel centos fedora", "Rocky Linux 9.3"), ("almalinux", "rhel centos fedora", "AlmaLinux 9"),
+                ("centos", "rhel fedora", "CentOS Stream 9"), ("opensuse-leap", "suse opensuse", "openSUSE Leap 15.5"),
+                ("linuxmint", "ubuntu debian", "Linux Mint 21"), ("pop", "ubuntu debian", "Pop!_OS 22.04"),
+                ("amzn", "centos rhel fedora", "Amazon Linux 2023"), ("arch", "", "Arch Linux"),
+                ("alpine", "", "Alpine Linux v3.19"), ("darwin", "", "Darwin 27.2.0"), ("myos", "ubuntu", "MyOS 1"),
+                ("weird", "", "Something"),
+            ]
+            for (id, like, pretty) in cases {
+                let r = Distro.resolve(id: id, like: like, pretty: pretty)
+                print("\(pretty) -> \(r) (\(Distro.named(r)?.name ?? "?"))")
+            }
+            exit(0)
+        }
+        if args.contains("--update-test") {
+            let done = DispatchSemaphore(value: 0)
+            Task { @MainActor in
+                let u = Updater.shared
+                print("current \(u.currentVersion), repo \(u.repo)")
+                await u.check(userInitiated: true)
+                print("check → \(u.state) latest=\(u.latest?.version ?? "-")")
+                if u.state == .available { await u.downloadAndInstall() }
+                print("install → \(u.state)")
+                done.signal()
+            }
+            while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            exit(0)
+        }
+        if args.contains("--scan-test") {
+            let t0 = Date()
+            for src in InstalledClientScanner.scan() {
+                print("FOUND \(src.app) | \(src.location) | sessions=\(src.count) skipped=\(src.result.skipped.count)\(src.note != nil ? " | note" : "")")
+            }
+            print(String(format: "scan took %.2fs", Date().timeIntervalSince(t0)))
+            exit(0)
+        }
+        if let k = args.firstIndex(of: "--import-test"), args.count > k + 1 {
+            do {
+                let r = try SessionImporter.importFile(at: URL(fileURLWithPath: args[k + 1]), as: .auto)
+                print("DETECTED \(r.detected.rawValue) sessions=\(r.sessions.count) skipped=\(r.skipped.count)")
+                for p in r.sessions { print("  [\(p.group)] \(p.displayName) -> \(p.username)@\(p.host):\(p.port) \(p.auth.rawValue) \(p.keyPath)") }
+                for s in r.skipped { print("  skipped: \(s)") }
+            } catch { print("IMPORT ERROR: \(error.localizedDescription)") }
+            exit(0)
+        }
+        if let f = args.firstIndex(of: "--ftptest"), args.count >= f + 6 {
+            // --ftptest host port user password ftp|ftps [insecure]
+            let cfg = FTPFileSystem.Config(host: args[f + 1], port: Int(args[f + 2]) ?? 21, username: args[f + 3],
+                                           password: args[f + 4], secure: args[f + 5] == "ftps",
+                                           acceptInvalidCertificates: args.contains("insecure"), initialPath: "")
+            let done = DispatchSemaphore(value: 0)
+            var failed = false
+            Task { @MainActor in
+                do {
+                    try await testFileSystem(FTPFileSystem(config: cfg), label: args[f + 5].uppercased(), remoteBase: nil)
+                    print("FTPTEST PASS")
+                } catch {
+                    print("FTPTEST FAIL: \(SSHConnection.describe(error))")
+                    failed = true
+                }
+                done.signal()
+            }
+            while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            exit(failed ? 1 : 0)
+        }
+        guard let i = args.firstIndex(of: "--selftest"), args.count >= i + 5 else { return }
+        let host = args[i + 1], port = Int(args[i + 2]) ?? 22, user = args[i + 3], cred = args[i + 4]
+
+        var profile = SessionProfile(name: "selftest", host: host, port: port, username: user)
+        var secret: String?
+        if cred.hasPrefix("password:") {
+            profile.auth = .password
+            secret = String(cred.dropFirst("password:".count))
+        } else {
+            profile.auth = .privateKey
+            profile.keyPath = cred
+        }
+
+        let done = DispatchSemaphore(value: 0)
+        var failed = false
+        Task { @MainActor in
+            do {
+                try await run(profile: profile, secret: secret)
+                print("SELFTEST PASS")
+            } catch {
+                print("SELFTEST FAIL: \(SSHConnection.describe(error))")
+                failed = true
+            }
+            done.signal()
+        }
+        while done.wait(timeout: .now() + 0.05) == .timedOut {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        }
+        exit(failed ? 1 : 0)
+    }
+
+    @MainActor
+    private static func run(profile: SessionProfile, secret: String?) async throws {
+        let conn = SSHConnection(profile: profile, secret: secret)
+        let client = try await conn.connectedClient()
+        print("✓ connected + authenticated (\(profile.auth.rawValue))")
+
+        // PTY shell round trip
+        let request = SSHChannelRequestEvent.PseudoTerminalRequest(
+            wantReply: true, term: "xterm-256color", terminalCharacterWidth: 100, terminalRowHeight: 30,
+            terminalPixelWidth: 0, terminalPixelHeight: 0, terminalModes: SSHTerminalModes([:]))
+        var output = ""
+        try await SSHConnection.ignoringRemoteClose { try await client.withPTY(request) { inbound, outbound in
+            try await outbound.write(ByteBuffer(string: "echo MTP_$((40+2))_OK; exit\n"))
+            for try await chunk in inbound {
+                switch chunk {
+                case .stdout(let b), .stderr(let b): output += String(buffer: b)
+                }
+            }
+        } }
+        guard output.contains("MTP_42_OK") else { throw TestError("PTY output missing marker:\n\(output)") }
+        print("✓ interactive PTY shell")
+
+        try await testFileSystem(SFTPFileSystem(connection: conn), label: "SFTP", remoteBase: "/tmp")
+        conn.disconnect()
+    }
+
+    /// list → mkdir → upload (folder) → list → download → compare → rename → delete, on any RemoteFileSystem.
+    @MainActor
+    static func testFileSystem(_ fs: RemoteFileSystem, label: String, remoteBase: String?) async throws {
+        let home = try await fs.home()
+        let listing = try await fs.list(home)
+        print("✓ \(label) home \(home): \(listing.count) entries")
+
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("mtp-selftest-\(UUID().uuidString)")
+        let srcDir = tmp.appendingPathComponent("folder", isDirectory: true)
+        try FileManager.default.createDirectory(at: srcDir.appendingPathComponent("sub"), withIntermediateDirectories: true)
+        var bytes = [UInt8](repeating: 0, count: 300_000) // several chunks
+        for i in bytes.indices { bytes[i] = UInt8(truncatingIfNeeded: i &* 31 &+ 7) }
+        try Data(bytes).write(to: srcDir.appendingPathComponent("payload.bin"))
+        try Data("hello ftp/sftp\n".utf8).write(to: srcDir.appendingPathComponent("sub/notes with space.txt"))
+
+        let remoteDir = RemotePath.join(remoteBase ?? home, "mtp-selftest-\(UUID().uuidString.prefix(8))")
+        try await fs.makeDirectory(remoteDir)
+        let up = Transfer(name: "folder", direction: .upload)
+        try await TransferQueue.upload(local: srcDir, toRemoteDir: remoteDir, fs: fs, transfer: up)
+        try await Task.sleep(for: .milliseconds(200))
+        print("✓ \(label) upload folder (\(up.bytesDone) bytes)")
+
+        let remoteFolder = RemotePath.join(remoteDir, "folder")
+        let items = try await fs.list(remoteFolder)
+        guard let file = items.first(where: { $0.name == "payload.bin" }), items.contains(where: { $0.name == "sub" && $0.isDirectory }) else {
+            throw TestError("uploaded items not listed: \(items.map(\.name))")
+        }
+        print("✓ \(label) list shows file (\(file.size ?? 0) bytes) and sub-folder")
+
+        let back = tmp.appendingPathComponent("back", isDirectory: true)
+        try FileManager.default.createDirectory(at: back, withIntermediateDirectories: true)
+        let down = Transfer(name: "folder", direction: .download)
+        try await TransferQueue.download(remote: FileItem(name: "folder", path: remoteFolder, isDirectory: true, isSymlink: false,
+                                                          size: nil, modified: nil, permissions: ""),
+                                         toLocalDir: back, fs: fs, transfer: down)
+        let roundTrip = try Data(contentsOf: back.appendingPathComponent("folder/payload.bin"))
+        let note = try String(contentsOf: back.appendingPathComponent("folder/sub/notes with space.txt"), encoding: .utf8)
+        guard roundTrip == Data(bytes), note == "hello ftp/sftp\n" else { throw TestError("downloaded content differs") }
+        print("✓ \(label) download folder matches byte-for-byte")
+
+        try await fs.rename(RemotePath.join(remoteFolder, "payload.bin"), to: RemotePath.join(remoteFolder, "renamed.bin"))
+        guard try await fs.list(remoteFolder).contains(where: { $0.name == "renamed.bin" }) else { throw TestError("rename failed") }
+        print("✓ \(label) rename")
+
+        try await fs.setPermissions(RemotePath.join(remoteFolder, "renamed.bin"), mode: 0o600)
+        let perms = try await fs.list(remoteFolder).first { $0.name == "renamed.bin" }?.permissions ?? "?"
+        guard perms.hasSuffix("rw-------") else { throw TestError("chmod 600 gave \(perms)") }
+        try await fs.setPermissions(RemotePath.join(remoteFolder, "sub"), mode: 0o750)
+        let subPerms = try await fs.list(remoteFolder).first { $0.name == "sub" }?.permissions ?? "?"
+        guard subPerms.hasSuffix("rwxr-x---") else { throw TestError("chmod 750 gave \(subPerms)") }
+        print("✓ \(label) chmod (file \(perms), folder \(subPerms))")
+
+        try await fs.removeRecursively(FileItem(name: "x", path: remoteDir, isDirectory: true, isSymlink: false,
+                                                size: nil, modified: nil, permissions: ""))
+        guard !(try await fs.list(remoteBase ?? home)).contains(where: { $0.path == remoteDir }) else { throw TestError("delete failed") }
+        try? FileManager.default.removeItem(at: tmp)
+        print("✓ \(label) recursive delete")
+        fs.close()
+    }
+
+    struct TestError: LocalizedError {
+        let message: String
+        init(_ m: String) { message = m }
+        var errorDescription: String? { message }
+    }
+}
+
+/// Debug-only hooks for automated UI checks (no Screen Recording permission needed):
+///   MTP_DEMO="host,port,user,keyPath"  opens that session in a tab at launch
+///   MTP_SNAPSHOT="/path/out.png"       saves the main window as PNG after a few seconds
+///   MTP_MODE="files"                   switches the demo tab to the two-pane Files view
+enum DebugHooks {
+    @MainActor
+    static func run(workspace: Workspace) {
+        let env = ProcessInfo.processInfo.environment
+        if let demo = env["MTP_DEMO"] {
+            let p = demo.split(separator: ",").map(String.init)
+            if p.count == 4 {
+                var profile = SessionProfile(name: "Demo server", host: p[0], port: Int(p[1]) ?? 22, username: p[2])
+                profile.auth = .privateKey
+                profile.keyPath = p[3]
+                workspace.open(profile, secret: nil)
+                if env["MTP_MODE"] == "files", case .ssh(let tab) = workspace.tabs.last { tab.mode = .commander }
+            }
+        }
+        if env["MTP_OPEN"] == "help" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .showHelp, object: nil) }
+        } else if env["MTP_OPEN"] == "settings" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .showSettings, object: nil) }
+        } else if env["MTP_OPEN"] == "import" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .importSessions, object: nil) }
+        }
+        if let text = env["MTP_SEND"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { workspace.selected?.sendText(text + "\r") }
+        }
+        if let out = env["MTP_SNAPSHOT"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (Double(env["MTP_DELAY"] ?? "") ?? 4)) {
+                let wantTitle = env["MTP_WINDOW"]
+                guard let window = NSApp.windows.first(where: { w in
+                          w.isVisible && w.frame.width > 300 && (wantTitle == nil || w.title.contains(wantTitle!))
+                      }) ?? NSApp.keyWindow,
+                      let view = (env["MTP_SHEET"] == "1" ? (window.attachedSheet ?? window) : window).contentView?.superview,
+                      let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+                if env["MTP_REPORT"] != nil, case .ssh(let t) = workspace.selected {
+                    t.terminal.terminalView.selectAll()
+                    print("TERMINAL<<\n\(t.terminal.terminalView.getSelection() ?? "")\n>>")
+                    print("BROWSER PATH \(t.remote.path) follow=\(t.remote.followTerminal)")
+                }
+                func invalidate(_ v: NSView) { v.needsDisplay = true; v.subviews.forEach(invalidate) }
+                invalidate(view)
+                view.displayIfNeeded()
+                view.cacheDisplay(in: view.bounds, to: rep)
+                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: out))
+                if env["MTP_QUIT"] == "1" { NSApp.terminate(nil) }
+            }
+        }
+    }
+}

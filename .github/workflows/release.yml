@@ -1,0 +1,24 @@
+# Builds and publishes a release when you push a tag like v0.5.0:
+#   echo 0.5.0 > VERSION && git commit -am "Release 0.5.0" && git tag v0.5.0 && git push --follow-tags
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check version matches tag
+        run: |
+          test "v$(cat VERSION)" = "${GITHUB_REF_NAME}" || { echo "VERSION file ($(cat VERSION)) does not match tag ${GITHUB_REF_NAME}"; exit 1; }
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: ./scripts/release.sh
