@@ -228,7 +228,14 @@ struct SessionEditor: View {
     @ViewState private var secret = ""
     @ViewState private var storedSecret: String?
     @ViewState private var saveSecret = true
+    @ObservedObject private var identityStore = IdentityStore.shared
+    @Environment(\.openWindow) private var openWindow
     var onSaveAndConnect: (SessionProfile, String?) -> Void
+
+    private var identity: Identity? { identityStore.identity(profile.identityID) }
+    private var usableIdentities: [Identity] {
+        identityStore.identities.filter { !profile.kind.isFTP || $0.auth == .password }
+    }
 
     private var isNew: Bool { !store.sessions.contains { $0.id == profile.id } }
     private var valid: Bool { !profile.host.trimmingCharacters(in: .whitespaces).isEmpty && !profile.username.isEmpty }
@@ -282,10 +289,35 @@ struct SessionEditor: View {
                     Text(profile.kind.detail).font(.caption).foregroundStyle(.secondary)
                     TextField("Host", text: $profile.host, prompt: Text("example.com or 10.0.0.5"))
                     TextField("Port", value: $profile.port, format: .number.grouping(.never))
-                    TextField("Username", text: $profile.username, prompt: Text("root"))
+                    if let identity {
+                        LabeledContent("Username") { Text(identity.username).foregroundStyle(.secondary) }
+                    } else {
+                        TextField("Username", text: $profile.username, prompt: Text("root"))
+                    }
                 }
                 Section("Authentication") {
-                    if !profile.kind.isFTP {
+                    Picker("Login", selection: $profile.identityID) {
+                        Text("Enter for this session").tag(UUID?.none)
+                        if !usableIdentities.isEmpty { Divider() }
+                        ForEach(usableIdentities) { i in
+                            Label("\(i.displayName) — \(i.username)", systemImage: "person.text.rectangle").tag(UUID?.some(i.id))
+                        }
+                    }
+                    if let identity {
+                        HStack(spacing: 10) {
+                            IconTile(symbol: "person.text.rectangle.fill", color: .indigo, size: 28)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(identity.displayName)
+                                Text("\(identity.username) · \(identity.detail)\(Keychain.read(account: identity.account) == nil && identity.auth == .password ? " · asked when connecting" : "")")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("Manage…") { openWindow(id: "keychain") }
+                        }
+                        Text("The username, password and key come from this identity. Change them there and every session using it is updated.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    if identity == nil && !profile.kind.isFTP {
                         Picker("Method", selection: $profile.auth) {
                             ForEach(AuthMethod.allCases) { Text($0.label).tag($0) }
                         }
@@ -294,7 +326,9 @@ struct SessionEditor: View {
                     if profile.kind == .ftps {
                         Toggle("Accept invalid / self-signed certificates", isOn: $profile.acceptInvalidCertificates)
                     }
-                    if profile.auth == .privateKey && !profile.kind.isFTP {
+                    if identity != nil {
+                        EmptyView()
+                    } else if profile.auth == .privateKey && !profile.kind.isFTP {
                         HStack {
                             TextField("Key file", text: $profile.keyPath, prompt: Text("~/.ssh/id_ed25519"))
                             Button("Choose…") { chooseKey() }
@@ -303,7 +337,12 @@ struct SessionEditor: View {
                     } else {
                         RevealableSecretField(title: "Password", text: $secret, prompt: saveSecret ? "" : "Asked when connecting", savedValue: storedSecret)
                     }
-                    Toggle(Keychain.storage == .vault ? "Save in the MacTerm+ vault" : "Save in the Keychain", isOn: $saveSecret)
+                    if identity == nil {
+                        Toggle(Keychain.storage == .vault ? "Save in the MacTerm+ vault" : "Save in the Keychain", isOn: $saveSecret)
+                        Button("Save as a Reusable Identity") { makeIdentity() }
+                            .disabled(profile.username.isEmpty)
+                            .help("Use this login for other sessions too")
+                    }
                 }
                 Section("Options") {
                     TextField("Start folder", text: $profile.initialRemotePath, prompt: Text("Home folder"))
@@ -319,7 +358,7 @@ struct SessionEditor: View {
                 Button("Save") { save(); dismiss() }.disabled(!valid)
                 Button("Save & Connect") {
                     save()
-                    onSaveAndConnect(profile, secret.isEmpty ? nil : secret)
+                    onSaveAndConnect(profile, secret.isEmpty || identity != nil ? nil : secret)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -336,14 +375,26 @@ struct SessionEditor: View {
             if profile.port == old.defaultPort { profile.port = new.defaultPort }
             if new.isFTP { profile.auth = .password }
         }
+        .onChange(of: profile.identityID) { _, _ in
+            if let i = identity { profile.username = i.username; profile.auth = i.auth; profile.keyPath = i.keyPath }
+        }
         .onChange(of: profile.auth) { _, new in
             if new == .privateKey && profile.keyPath.isEmpty { profile.keyPath = defaultKeyPath() }
         }
     }
 
+    private func makeIdentity() {
+        let i = Identity(name: profile.username, username: profile.username,
+                         auth: profile.kind.isFTP ? .password : profile.auth, keyPath: profile.keyPath)
+        if !secret.isEmpty { Keychain.save(secret, account: i.account) }
+        identityStore.upsert(i, store: nil)
+        profile.identityID = i.id
+    }
+
     private func save() {
         profile.host = profile.host.trimmingCharacters(in: .whitespaces)
         store.upsert(profile)
+        guard identity == nil else { return }   // the identity holds the secret
         if saveSecret && !secret.isEmpty {
             Keychain.save(secret, account: profile.keychainAccount)
         } else {

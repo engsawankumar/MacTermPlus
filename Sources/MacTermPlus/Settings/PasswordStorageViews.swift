@@ -13,7 +13,7 @@ struct PasswordStorageSection: View {
         var id: Int { hashValue }
     }
 
-    private var accounts: [String] { store.sessions.map(\.keychainAccount) + ["sync-passphrase"] }
+    private var accounts: [String] { store.sessions.map(\.keychainAccount) + IdentityStore.shared.accounts + ["sync-passphrase"] }
 
     var body: some View {
         Section("Where passwords are saved") {

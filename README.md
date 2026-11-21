@@ -37,6 +37,7 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 | 📁 **Files** | File browser beside the terminal, two-pane Mac ↔ server view, drag & drop, upload and download whole folders, edit any file in your favorite Mac app |
 | 🔐 **Permissions** | Change file permissions with checkboxes, presets or octal values, for one file or a whole folder |
 | 📊 **Server info** | CPU graph, memory, network speed, disk space, uptime and the server's OS at a glance |
+| 🔑 **Keychain** | SSH keys (create, add, fingerprints, permission check), reusable **identities** shared by many servers, known hosts, and saved passwords you can view with Touch ID |
 | 🔀 **Tunnels** | Reach databases and admin pages behind a server through a port on your Mac |
 | ⌨️ **MultiExec** | Type once, run in every open terminal |
 | ⬇️ **Import** | Finds sessions saved by other apps on this Mac (including Windows apps in compatibility layers), plus `~/.ssh/config`, CSV and the Passwords app |

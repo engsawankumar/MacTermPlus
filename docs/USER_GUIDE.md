@@ -189,7 +189,7 @@ Choose **OpenSSH config → Use ~/.ssh/config**. Each `Host` entry becomes a ses
 
 ### Toolbar
 
-The big buttons along the top: **Session** (new), **Sessions**, **Files**, **Terminal** (local shell), **View** (hide or show the sidebar), **Split**, **MultiExec**, **Tunneling**, **Commands** (Quick Commands), **Macros**, **Tools**, **Sync**, **Settings**, **Help** and **Exit**. Settings → General → Icon style changes how the icons look.
+The big buttons along the top: **Session** (new), **Sessions**, **Files**, **Terminal** (local shell), **View** (hide or show the sidebar), **Split**, **MultiExec**, **Tunneling**, **Commands** (Quick Commands), **Keychain**, **Macros**, **Tools**, **Sync**, **Settings**, **Help** and **Exit**. Settings → General → Icon style changes how the icons look.
 
 ### Sidebar
 
@@ -258,6 +258,18 @@ Sidebar → **Tunnels** → **New Tunnel**: pick the SSH session, the local port
 The session must use a private key, or have its password saved in the Keychain, because tunnels run in the background without asking. If the local port is already used by another app, pick another one.
 
 ## Macros & Tools
+
+### Keychain window
+
+Click **Keychain** in the toolbar (or press **⌥⌘K**). One window holds **Keys**, **Identities**, **Known Hosts** and **Passwords**.
+
+### SSH keys
+
+**Keys** shows the SSH private keys in `~/.ssh` (and any you add from elsewhere), with type, passphrase status, SHA256 fingerprint and how many sessions use each one. **New Key** creates an ED25519 key with `ssh-keygen` (a passphrase is recommended), and can create an identity for it at the same time. Copy the public key into a server's `~/.ssh/authorized_keys` to log in with it. A key that other users on this Mac can read is shown in red, and **Fix** corrects it. MacTerm+ never copies, uploads or syncs private keys; it only remembers where they are.
+
+### Identities
+
+An **identity** is a reusable login: a username plus a password or a key. In a session, choose it under **Authentication → Login**. Change the identity's password once and every session that uses it gets the new one. **Save as a Reusable Identity** in a session turns its login into an identity. Deleting an identity doesn't break anything: each session that used it gets its own copy of the login. Identities sync with your sessions; their passwords sync only if you sync passwords, encrypted with your passphrase.
 
 ### Seeing saved passwords
 

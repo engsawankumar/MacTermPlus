@@ -47,6 +47,12 @@ struct MacTermPlusApp: App {
         }
         .windowResizability(.contentSize)
 
+        Window("Keychain", id: "keychain") {
+            KeychainWindow()
+                .environmentObject(store)
+        }
+        .defaultSize(width: 980, height: 640)
+
         Window("Set Up Sync", id: "sync-setup") {
             SyncSetupView()
         }
@@ -83,6 +89,7 @@ struct MacTermPlusApp: App {
             CommandGroup(after: .sidebar) {
                 Button("Quick Commands") { AppSettings.shared.showQuickCommands.toggle() }
                     .keyboardShortcut("k", modifiers: [.command, .shift])
+                KeychainMenuButton()
                 Button("Search Quick Commands") {
                     AppSettings.shared.showQuickCommands = true
                     DispatchQueue.main.async { NotificationCenter.default.post(name: .focusQuickCommandSearch, object: nil) }
@@ -177,5 +184,14 @@ struct AboutView: View {
         .frame(width: 380)
         .tint(settings.accent.color)
         .preferredColorScheme(settings.appearance.colorScheme)
+    }
+}
+
+/// View ▸ Keychain… (keys, identities, known hosts, passwords).
+private struct KeychainMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button("Keychain…") { openWindow(id: "keychain") }
+            .keyboardShortcut("k", modifiers: [.command, .option])
     }
 }

@@ -500,7 +500,7 @@ private struct KeychainSettings: View {
                     .disabled(!Keychain.iCloudAvailable)
                     .onChange(of: useICloud) { _, on in
                         Keychain.useICloud = on
-                        let n = Keychain.migrateAll(accounts: store.sessions.map(\.keychainAccount))
+                        let n = Keychain.migrateAll(accounts: store.sessions.map(\.keychainAccount) + IdentityStore.shared.accounts)
                         message = on ? "Moved \(n) password\(n == 1 ? "" : "s") to iCloud Keychain."
                                      : "Moved \(n) password\(n == 1 ? "" : "s") back to this Mac’s keychain."
                     }

@@ -88,11 +88,15 @@ struct SessionProfile: Codable, Identifiable, Hashable {
     var themeID: String = ""
     /// Server OS detected on the last connection (Distro id), for the OS icon.
     var osID: String = ""
+    /// Saved identity (username + password or key) this session uses instead of its own credentials.
+    var identityID: UUID?
     /// Last change, used to merge edits from other devices during sync.
     var updatedAt: Date = Date()
 
     var displayName: String { name.isEmpty ? "\(username)@\(host)" : name }
     var keychainAccount: String { id.uuidString }
+    /// Where this session's password / key passphrase is saved: its identity's, or its own.
+    var secretAccount: String { identityID.map(Identity.account(for:)) ?? keychainAccount }
     var endpoint: String {
         let scheme = kind == .ssh ? "" : "\(kind.rawValue)://"
         return "\(scheme)\(username.isEmpty ? "" : username + "@")\(host)\(port == kind.defaultPort ? "" : ":\(port)")"
@@ -124,6 +128,7 @@ struct SessionProfile: Codable, Identifiable, Hashable {
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date(timeIntervalSince1970: 0)
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? ""
         osID = try c.decodeIfPresent(String.self, forKey: .osID) ?? ""
+        identityID = try? c.decodeIfPresent(UUID.self, forKey: .identityID)
     }
 
     /// Same server, regardless of name — used to skip duplicates on import.

@@ -15,6 +15,43 @@ enum SelfTest {
             try? HelpContent.markdown().write(toFile: args[h + 1], atomically: true, encoding: .utf8)
             exit(0)
         }
+        if let k = args.firstIndex(of: "--key-inspect") {
+            // Tests: MacTermPlus --key-inspect <private key files…>
+            for p in args[(k + 1)...] {
+                if let i = SSHKeys.inspect(p) {
+                    print("KEY \(i.name) type=\(i.keyType) encrypted=\(i.encrypted) tooOpen=\(i.tooOpen) fp=\(i.fingerprint ?? "-")")
+                } else { print("KEY \((p as NSString).lastPathComponent) not-a-key") }
+            }
+            exit(0)
+        }
+        if let k = args.firstIndex(of: "--identity-test"), args.count > k + 4 {
+            // Tests: MTP_DATA_DIR=… MacTermPlus --identity-test host port user keyPath
+            let done = DispatchSemaphore(value: 0)
+            Task { @MainActor in
+                let store = SessionStore()
+                let ident = Identity(name: "test identity", username: args[k + 3], auth: .privateKey, keyPath: args[k + 4])
+                IdentityStore.shared.upsert(ident, store: store)
+                var p = SessionProfile(name: "uses-identity", host: args[k + 1], port: Int(args[k + 2]) ?? 22, username: "nobody")
+                p.identityID = ident.id
+                store.upsert(p)
+                let r = p.resolved()
+                print("RESOLVED user=\(r.username) auth=\(r.auth) account=\(p.secretAccount == ident.account)")
+                let conn = SSHConnection(profile: r, secret: Keychain.read(account: r.secretAccount))
+                do {
+                    let client = try await conn.connectedClient()
+                    let out = try await client.executeCommand("whoami")
+                    print("WHOAMI \(String(buffer: out).trimmingCharacters(in: .whitespacesAndNewlines))")
+                } catch { print("ERROR \(error)") }
+                // Deleting the identity keeps the session working on its own.
+                IdentityStore.shared.delete(ident, store: store)
+                if let after = store.sessions.first(where: { $0.id == p.id }) {
+                    print("AFTER-DELETE identity=\(after.identityID == nil ? "none" : "still") user=\(after.username) auth=\(after.auth) key=\(after.keyPath)")
+                }
+                done.signal()
+            }
+            while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            exit(0)
+        }
         if let k = args.firstIndex(of: "--knownhosts-import"), args.count > k + 1 {
             // Tests: MTP_DATA_DIR=… MacTermPlus --knownhosts-import <file>
             let r = KnownHosts.shared.importOpenSSH((try? String(contentsOfFile: args[k + 1], encoding: .utf8)) ?? "")
@@ -39,8 +76,18 @@ enum SelfTest {
                 m.syncSettings = !args.contains("nosettings")
                 m.attach(store: store)
                 for a in args where a.hasPrefix("theme:") { AppSettings.shared.themeID = String(a.dropFirst(6)) }
+                for a in args where a.hasPrefix("pass:") { m.passphrase = String(a.dropFirst(5)); m.syncPasswords = true }
+                for a in args where a.hasPrefix("ident:") {
+                    let f = a.dropFirst(6).split(separator: ":").map(String.init)   // name:user:password
+                    if f.count == 3 {
+                        let i = Identity(name: f[0], username: f[1])
+                        Keychain.save(f[2], account: i.account)
+                        IdentityStore.shared.upsert(i, store: store)
+                    }
+                }
                 m.enabled = true
                 await m.syncNow()
+                for i in IdentityStore.shared.identities { print("IDENT \(i.name) user=\(i.username) pw=\(Keychain.read(account: i.account) ?? "-")") }
                 print("SYNC \(m.lastError ?? "ok") | \(m.lastSummary) | sessions=\(store.sessions.map(\.name).sorted().joined(separator: ",")) | theme=\(AppSettings.shared.themeID)")
                 done.signal()
             }
@@ -421,6 +468,8 @@ enum DebugHooks {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .showSettings, object: nil) }
         } else if env["MTP_OPEN"] == "welcome" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: AnnouncementCenter.showWindow, object: nil) }
+        } else if env["MTP_OPEN"] == "keychain" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .debugOpenWindow, object: "keychain") }
         } else if env["MTP_OPEN"] == "sync-setup" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .debugOpenWindow, object: "sync-setup") }
         } else if env["MTP_OPEN"] == "import" {

@@ -4,23 +4,42 @@ import SwiftUI
 struct SavedPasswordsSection: View {
     @EnvironmentObject var store: SessionStore
     @ObservedObject private var guardian = RevealGuard.shared
-    @ViewState private var shown: Set<UUID> = []
+    @ObservedObject private var identities = IdentityStore.shared
+    @ViewState private var shown: Set<String> = []
     @ViewState private var search = ""
-    @ViewState private var deleting: SessionProfile?
-    @ViewState private var copied: UUID?
+    @ViewState private var deleting: Row?
+    @ViewState private var copied: String?
     @ViewState private var refresh = 0
     @ViewState private var now = Date()
 
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    private var rows: [(SessionProfile, String)] {
+    struct Row: Identifiable {
+        let id: String          // Keychain account
+        let title: String
+        let detail: String
+        let color: Color
+        let isIdentity: Bool
+        let secret: String
+    }
+
+    private var rows: [Row] {
         _ = refresh
         guard !Showcase.isOn, !Keychain.vaultLocked else { return [] }
-        return store.sessions.compactMap { p in
-            guard let s = Keychain.read(account: p.keychainAccount), !s.isEmpty else { return nil }
-            if !search.isEmpty && !(p.displayName + " " + p.username + " " + p.host).localizedCaseInsensitiveContains(search) { return nil }
-            return (p, s)
+        let ids: [Row] = identities.identities.compactMap { i in
+            guard let s = Keychain.read(account: i.account), !s.isEmpty else { return nil }
+            return Row(id: i.account, title: i.displayName, detail: "Identity · \(i.username)\(i.auth == .privateKey ? " · key passphrase" : "")",
+                       color: .indigo, isIdentity: true, secret: s)
         }
+        let sessions: [Row] = store.sessions.compactMap { p in
+            guard let s = Keychain.read(account: p.keychainAccount), !s.isEmpty else { return nil }
+            return Row(id: p.keychainAccount, title: p.displayName,
+                       detail: "\(p.username.isEmpty ? "" : p.username + "@")\(p.host)\(p.auth == .privateKey ? " · key passphrase" : "")",
+                       color: p.color.color, isIdentity: false, secret: s)
+        }
+        let all = ids + sessions
+        guard !search.isEmpty else { return all }
+        return all.filter { ($0.title + " " + $0.detail).localizedCaseInsensitiveContains(search) }
     }
 
     var body: some View {
@@ -44,13 +63,17 @@ struct SavedPasswordsSection: View {
             } else if rows.isEmpty {
                 Text(search.isEmpty ? "No saved passwords yet." : "Nothing matches “\(search)”.").foregroundStyle(.secondary)
             }
-            ForEach(rows, id: \.0.id) { p, secret in
+            ForEach(rows) { p in
+                let secret = p.secret
                 HStack(spacing: 10) {
-                    Circle().fill(p.color.color).frame(width: 8, height: 8)
+                    if p.isIdentity {
+                        Image(systemName: "person.text.rectangle.fill").foregroundStyle(p.color).frame(width: 8)
+                    } else {
+                        Circle().fill(p.color).frame(width: 8, height: 8)
+                    }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(p.displayName).lineLimit(1)
-                        Text("\(p.username.isEmpty ? "" : p.username + "@")\(p.host)\(p.auth == .privateKey ? " · key passphrase" : "")")
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        Text(p.title).lineLimit(1)
+                        Text(p.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
                     Text(shown.contains(p.id) && guardian.isUnlocked ? secret : "••••••••")
@@ -78,24 +101,25 @@ struct SavedPasswordsSection: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         .onReceive(tick) { now = $0; if !guardian.isUnlocked && !shown.isEmpty { shown = [] } }
-        .confirmationDialog(deleting.map { "Forget the saved password for “\($0.displayName)”?" } ?? "",
+        .confirmationDialog(deleting.map { "Forget the saved password for “\($0.title)”?" } ?? "",
                             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { p in
             Button("Forget Password", role: .destructive) {
-                Keychain.delete(account: p.keychainAccount)
+                Keychain.delete(account: p.id)
                 shown.remove(p.id)
                 refresh += 1
             }
-        } message: { _ in Text("The session stays; you’ll be asked for the password when you connect.") }
+        } message: { p in Text(p.isIdentity ? "The identity stays; you’ll be asked for the password when you connect."
+                                             : "The session stays; you’ll be asked for the password when you connect.") }
         .onDisappear { shown = [] }
     }
 
-    private func toggle(_ id: UUID) async {
+    private func toggle(_ id: String) async {
         if shown.contains(id) && guardian.isUnlocked { shown.remove(id); return }
         guard await guardian.unlock(reason: "show a saved password") else { return }
         shown.insert(id)
     }
 
-    private func copy(_ id: UUID, _ secret: String) async {
+    private func copy(_ id: String, _ secret: String) async {
         guard await guardian.unlock(reason: "copy a saved password") else { return }
         RevealGuard.copy(secret)
         copied = id

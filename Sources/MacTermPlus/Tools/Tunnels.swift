@@ -73,15 +73,16 @@ final class TunnelManager: ObservableObject {
 
     func start(_ t: TunnelConfig, store: SessionStore) {
         guard servers[t.id] == nil else { return }
-        guard let sid = t.sessionID, let profile = store.sessions.first(where: { $0.id == sid }) else {
+        guard let sid = t.sessionID, let saved = store.sessions.first(where: { $0.id == sid }) else {
             states[t.id] = .failed("Choose an SSH session for this tunnel.")
             return
         }
+        let profile = saved.resolved()
         guard profile.kind == .ssh || profile.kind == .sftp else {
             states[t.id] = .failed("Tunnels need an SSH or SFTP session.")
             return
         }
-        let secret = Keychain.read(account: profile.keychainAccount)
+        let secret = Keychain.read(account: profile.secretAccount)
         if profile.auth == .password && secret == nil {
             states[t.id] = .failed("Save this session’s password in the Keychain to use it for tunnels.")
             return

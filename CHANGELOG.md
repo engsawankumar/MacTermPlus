@@ -3,6 +3,14 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.2.0
+- **Keychain window** (toolbar → Keychain, ⌥⌘K): Keys, Identities, Known Hosts and Passwords in one place.
+- **Keys**: your SSH keys with type, passphrase status, fingerprint and usage; create a new ED25519 key,
+  add an existing one, copy the public key, and fix keys that other users could read.
+- **Identities**: a reusable login (username + password or key) that many sessions share. Pick one under
+  Authentication → Login; change it once and every session follows. Identities sync with your sessions;
+  their passwords only inside the encrypted password sync.
+
 ## 1.1.0
 - **See your saved passwords**, safely: an 👁 button on the password in each session, and a **Saved passwords**
   list in Settings → Passwords with search, show, copy and forget. Each needs **Touch ID or your Mac password**;

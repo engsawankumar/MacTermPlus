@@ -43,7 +43,7 @@ struct ContentView: View {
         .preferredColorScheme(settings.appearance.colorScheme)
         .sheet(item: $editing) { profile in
             SessionEditor(profile: profile) { saved, secret in
-                workspace.open(saved, secret: secret ?? Keychain.read(account: saved.keychainAccount))
+                workspace.open(saved.resolved(), secret: secret ?? Keychain.read(account: saved.secretAccount))
             }
             .environmentObject(store)
         }
@@ -94,7 +94,8 @@ struct ContentView: View {
     }
 
     private func askOrOpen(_ profile: SessionProfile) {
-        let secret = Keychain.read(account: profile.keychainAccount)
+        let profile = profile.resolved()
+        let secret = Keychain.read(account: profile.secretAccount)
         let anonymousFTP = profile.kind.isFTP && profile.username.isEmpty
         if profile.auth == .password && secret == nil && !anonymousFTP {
             passwordFor = profile
@@ -181,6 +182,8 @@ struct MainToolbar: View {
                     Button("Hide This Button") { settings.showQuickCommands = false; settings.quickCommandsButton = false }
                 }
             }
+            ToolButton(icon: "key.horizontal.fill", color: .orange, title: "Keychain",
+                       help: "SSH keys, identities, known hosts and saved passwords (⌥⌘K)") { openWindow(id: "keychain") }
             ToolButton(icon: "paperplane.fill", color: .blue, title: "Macros", help: "Saved commands") { show(.macros) }
             ToolButton(icon: "wrench.and.screwdriver.fill", color: .red, title: "Tools", help: "Key generator, port checker…") { show(.tools) }
             Divider().frame(height: 36).padding(.horizontal, 4)

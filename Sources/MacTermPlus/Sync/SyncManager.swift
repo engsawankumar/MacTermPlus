@@ -81,6 +81,8 @@ struct SyncDocument: Codable {
     /// App preferences as a binary property list (types kept exactly).
     var settings: Data?
     var settingsModified = Date.distantPast
+    var identities: [Identity] = []
+    var identitiesModified = Date.distantPast
     var devices: [DeviceInfo] = []
     var vault: SecretVault?
 
@@ -102,6 +104,8 @@ struct SyncDocument: Codable {
         quickCommandsModified = (try? c.decodeIfPresent(Date.self, forKey: .quickCommandsModified)) ?? .distantPast
         settings = try? c.decodeIfPresent(Data.self, forKey: .settings)
         settingsModified = (try? c.decodeIfPresent(Date.self, forKey: .settingsModified)) ?? .distantPast
+        identities = (try? c.decodeIfPresent([Identity].self, forKey: .identities)) ?? []
+        identitiesModified = (try? c.decodeIfPresent(Date.self, forKey: .identitiesModified)) ?? .distantPast
         devices = try c.decodeIfPresent([DeviceInfo].self, forKey: .devices) ?? []
         vault = try c.decodeIfPresent(SecretVault.self, forKey: .vault)
     }
@@ -233,6 +237,12 @@ final class SyncManager: ObservableObject {
                 guard let self, !self.applyingSettings else { return }
                 UserDefaults.standard.set(Date(), forKey: "sync.settingsModified")
                 if self.syncSettings { self.scheduleSync(3) }
+            }
+        }
+        nc.addObserver(forName: IdentityStore.changed, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                UserDefaults.standard.set(Date(), forKey: "sync.identitiesModified")
+                self?.scheduleSync(2)
             }
         }
         nc.addObserver(forName: TunnelManager.changed, object: nil, queue: .main) { [weak self] _ in
@@ -395,8 +405,13 @@ final class SyncManager: ObservableObject {
         local.quickCommandsModified = ud.object(forKey: "sync.quickCommandsModified") as? Date ?? .distantPast
         local.settings = AppSettings.shared.syncSnapshot()
         local.settingsModified = ud.object(forKey: "sync.settingsModified") as? Date ?? .distantPast
+        local.identities = IdentityStore.shared.identities
+        local.identitiesModified = ud.object(forKey: "sync.identitiesModified") as? Date ?? .distantPast
         // Items this Mac doesn't sync: leave the cloud copy as it is and don't take it either.
-        if !manager.syncSessions { local.sessions = []; local.deleted = [:] }
+        if !manager.syncSessions {
+            local.sessions = []; local.deleted = [:]
+            local.identities = []; local.identitiesModified = .distantPast
+        }
         if !manager.syncMacros {
             local.macros = []; local.macrosModified = .distantPast
             local.quickCommands = []; local.quickFolders = []; local.quickCommandsModified = .distantPast
@@ -423,17 +438,20 @@ final class SyncManager: ObservableObject {
                 vault = SecretVault(salt: salt.base64EncodedString(), check: try SecretVault.seal(SecretVault.checkText, key: key))
             }
             var v = vault!
-            for p in merged.sessions {
-                let id = p.id.uuidString
-                if let mine = Keychain.read(account: p.keychainAccount) {
+            // Sessions are keyed by their id, identities by "identity-<id>" (their Keychain account name).
+            let accounts = merged.sessions.map { ($0.id.uuidString, $0.keychainAccount) }
+                + merged.identities.map { ($0.account, $0.account) }
+            for (id, account) in accounts {
+                if let mine = Keychain.read(account: account) {
                     if let theirs = v.secrets[id], (try? SecretVault.open(theirs, key: key)) == mine { continue }
                     v.secrets[id] = try SecretVault.seal(mine, key: key)
                 } else if let theirs = v.secrets[id], let plain = try? SecretVault.open(theirs, key: key) {
-                    Keychain.save(plain, account: p.keychainAccount)
+                    Keychain.save(plain, account: account)
                     secretsIn += 1
                 }
             }
-            v.secrets = v.secrets.filter { id, _ in merged.sessions.contains { $0.id.uuidString == id } }
+            let keep = Set(accounts.map(\.0))
+            v.secrets = v.secrets.filter { keep.contains($0.key) }
             merged.vault = v
         } else {
             merged.vault = remote.vault   // keep other devices' vault untouched
@@ -454,6 +472,10 @@ final class SyncManager: ObservableObject {
         let tomb = Dictionary(uniqueKeysWithValues: merged.deleted.compactMap { k, v in UUID(uuidString: k).map { ($0, v) } })
         if manager.syncSessions, merged.sessions != store.sessions || tomb != store.deleted {
             store.applySynced(sessions: merged.sessions, deleted: tomb)
+        }
+        if manager.syncSessions, merged.identitiesModified > local.identitiesModified {
+            IdentityStore.shared.replaceAll(merged.identities)
+            ud.set(merged.identitiesModified, forKey: "sync.identitiesModified")
         }
         if manager.syncMacros, merged.macrosModified > local.macrosModified {
             MacroStore.shared.replaceAll(merged.macros)
@@ -510,6 +532,8 @@ final class SyncManager: ObservableObject {
         } else {
             out.quickCommands = b.quickCommands; out.quickFolders = b.quickFolders; out.quickCommandsModified = b.quickCommandsModified
         }
+        if a.identitiesModified >= b.identitiesModified { out.identities = a.identities; out.identitiesModified = a.identitiesModified }
+        else { out.identities = b.identities; out.identitiesModified = b.identitiesModified }
         if a.settingsModified >= b.settingsModified { out.settings = a.settings ?? b.settings; out.settingsModified = a.settingsModified }
         else { out.settings = b.settings; out.settingsModified = b.settingsModified }
         var devs: [String: DeviceInfo] = [:]
