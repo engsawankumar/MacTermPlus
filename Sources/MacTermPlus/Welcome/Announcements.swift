@@ -79,6 +79,13 @@ final class AnnouncementCenter: ObservableObject {
     @Published private(set) var messages: [Announcement] = []
     @Published private(set) var loading = false
     @Published var showAtLaunch: Bool { didSet { UserDefaults.standard.set(showAtLaunch, forKey: "welcome.atLaunch") } }
+    /// Download news for the Welcome window (Settings → General → Privacy).
+    @Published var newsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(newsEnabled, forKey: "welcome.news")
+            if !newsEnabled { messages = []; try? FileManager.default.removeItem(at: cacheURL) }
+        }
+    }
 
     private let cacheURL = AppPaths.supportDirectory.appendingPathComponent("announcements-cache.json")
     private var seen: Set<String> {
@@ -88,7 +95,8 @@ final class AnnouncementCenter: ObservableObject {
 
     private init() {
         showAtLaunch = UserDefaults.standard.object(forKey: "welcome.atLaunch") as? Bool ?? true
-        if let data = try? Data(contentsOf: cacheURL), let feed = try? JSONDecoder().decode(AnnouncementFeed.self, from: data) {
+        newsEnabled = UserDefaults.standard.object(forKey: "welcome.news") as? Bool ?? true
+        if newsEnabled, let data = try? Data(contentsOf: cacheURL), let feed = try? JSONDecoder().decode(AnnouncementFeed.self, from: data) {
             apply(feed)
         }
     }
@@ -103,7 +111,7 @@ final class AnnouncementCenter: ObservableObject {
     }
 
     func refresh() async {
-        guard let url = feedURL else { return }
+        guard newsEnabled, let url = feedURL else { return }
         loading = true
         defer { loading = false }
         var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)

@@ -39,9 +39,9 @@ enum Keychain {
 
     // MARK: Secrets
 
-    static func save(_ secret: String, account: String) {
+    private static func keychainSave(_ secret: String, account: String) {
         // Remove every older copy (local or iCloud) so there is exactly one.
-        delete(account: account)
+        keychainDelete(account: account)
         var add: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -54,7 +54,7 @@ enum Keychain {
         SecItemAdd(add as CFDictionary, nil)
     }
 
-    static func read(account: String) -> String? {
+    private static func keychainRead(account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -69,7 +69,7 @@ enum Keychain {
         return String(data: data, encoding: .utf8)
     }
 
-    static func delete(account: String) {
+    private static func keychainDelete(account: String) {
         SecItemDelete([
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -82,8 +82,61 @@ enum Keychain {
     static func migrateAll(accounts: [String]) -> Int {
         var moved = 0
         for a in accounts {
-            if let s = read(account: a) { save(s, account: a); moved += 1 }
+            if let s = keychainRead(account: a) { keychainSave(s, account: a); moved += 1 }
         }
+        return moved
+    }
+
+    // MARK: Where passwords are stored (macOS Keychain or MacTerm+ vault)
+
+    enum Storage: String, CaseIterable, Identifiable {
+        case keychain, vault
+        var id: String { rawValue }
+        var label: String { self == .keychain ? "macOS Keychain" : "MacTerm+ encrypted vault" }
+    }
+
+    static var storage: Storage {
+        get { Storage(rawValue: UserDefaults.standard.string(forKey: "secrets.storage") ?? "") ?? .keychain }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "secrets.storage") }
+    }
+
+    /// True when passwords live in the vault and it hasn't been unlocked yet this launch.
+    static var vaultLocked: Bool { storage == .vault && PasswordVault.shared.exists && !PasswordVault.shared.isUnlocked }
+
+    static func save(_ secret: String, account: String) {
+        if storage == .vault { PasswordVault.shared.save(secret, account: account) } else { keychainSave(secret, account: account) }
+    }
+
+    static func read(account: String) -> String? {
+        storage == .vault ? PasswordVault.shared.read(account: account) : keychainRead(account: account)
+    }
+
+    /// Removes the secret from both stores.
+    static func delete(account: String) {
+        keychainDelete(account: account)
+        PasswordVault.shared.delete(account: account)
+    }
+
+    /// Moves secrets for these accounts into the chosen store and removes them from the other one.
+    /// The vault must already be unlocked (or just created). Returns how many were moved.
+    @discardableResult
+    static func moveSecrets(to target: Storage, accounts: [String]) -> Int {
+        var moved = 0
+        for a in accounts {
+            switch target {
+            case .vault:
+                if let s = keychainRead(account: a) {
+                    PasswordVault.shared.save(s, account: a)
+                    if PasswordVault.shared.read(account: a) == s { keychainDelete(account: a); moved += 1 }
+                }
+            case .keychain:
+                if let s = PasswordVault.shared.read(account: a) {
+                    keychainSave(s, account: a)
+                    if keychainRead(account: a) == s { PasswordVault.shared.delete(account: a); moved += 1 }
+                }
+            }
+        }
+        storage = target
         return moved
     }
 

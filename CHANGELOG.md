@@ -3,6 +3,13 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.5
+- **Choose where passwords are saved** (Settings → Passwords): the macOS Keychain, or a new
+  **MacTerm+ encrypted vault** unlocked with one master password per launch, with no Keychain prompts.
+  Saved passwords move across automatically when you switch.
+- New **Privacy** settings: turn Welcome-window news off. Updates and news are download-only; MacTerm+
+  never sends sessions, server names or passwords anywhere.
+
 ## 1.0.4
 - Connects to older SSH servers (routers, NAS boxes, older Linux) that only offer Diffie-Hellman group 14,
   RSA (ssh-rsa) host keys or AES-CTR. Fixes “keyExchangeNegotiationFailure”. Modern algorithms are still preferred.

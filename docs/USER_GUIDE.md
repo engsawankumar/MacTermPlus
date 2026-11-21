@@ -297,7 +297,14 @@ Passwords are **not** synced unless you turn on **Also sync saved passwords** an
 
 ### Where passwords live
 
-Session passwords and key passphrases are stored in the macOS Keychain, never in MacTerm+'s own files.
+Choose in **Settings → Passwords**:
+• **macOS Keychain** (default): macOS may ask once per password whether MacTerm+ may use it; choose **Always Allow**.
+• **MacTerm+ encrypted vault**: passwords are kept in an encrypted file (AES-256) that only MacTerm+ reads. You type a **master password** once each time MacTerm+ opens, and there are no Keychain prompts. Switching moves your saved passwords across automatically.
+If you forget the master password, the vault's passwords can't be recovered; **Forgot Master Password** erases them so you can start again (your sessions stay).
+
+### Privacy
+
+MacTerm+ only downloads from GitHub: the update check and, if enabled, Welcome-window news (Settings → General → Privacy). It never sends your sessions, server names, user names or passwords anywhere.
 
 ### Passwords app = iCloud Keychain
 

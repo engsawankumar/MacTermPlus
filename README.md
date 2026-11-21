@@ -98,10 +98,11 @@ and installed with one click. Your sessions and settings stay as they are.
 
 ## Privacy & security
 
-- Passwords and key passphrases are stored only in your **macOS Keychain**.
+- Passwords stay on your Mac: in the **macOS Keychain**, or in an optional **MacTerm+ encrypted vault** unlocked with one master password (Settings → Passwords).
+- Updates and Welcome news are **download-only**: MacTerm+ never sends your sessions, server names or passwords anywhere.
 - Server identities are remembered on first connect; if a server's key ever changes, MacTerm+ warns you and doesn't connect.
 - Sync only writes to **your own** iCloud Drive or Google Drive folder. Passwords sync only if you turn it on, encrypted with a passphrase that never leaves your Macs.
-- No accounts, no tracking. The app contacts GitHub only to check for updates and Welcome window news.
+- No accounts, no tracking. The app contacts GitHub only to check for updates and, if you leave it on, Welcome window news.
 
 ## FAQ
 
@@ -109,7 +110,8 @@ and installed with one click. Your sessions and settings stay as they are.
 <summary><b>macOS asks for my Keychain password after an update</b></summary>
 
 Choose **Always Allow**. MacTerm+ 1.0.3 and later are signed with a permanent identity, so macOS remembers
-your choice for all future updates.
+your choice for all future updates. Prefer no Keychain prompts at all? Switch to the **MacTerm+ encrypted vault**
+in Settings → Passwords.
 </details>
 
 <details>

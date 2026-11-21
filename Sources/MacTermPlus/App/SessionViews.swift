@@ -302,7 +302,7 @@ struct SessionEditor: View {
                     } else {
                         SecureField("Password", text: $secret, prompt: Text(saveSecret ? "" : "Asked when connecting"))
                     }
-                    Toggle("Save in Keychain", isOn: $saveSecret)
+                    Toggle(Keychain.storage == .vault ? "Save in the MacTerm+ vault" : "Save in the Keychain", isOn: $saveSecret)
                 }
                 Section("Options") {
                     TextField("Start folder", text: $profile.initialRemotePath, prompt: Text("Home folder"))

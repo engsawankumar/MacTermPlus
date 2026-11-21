@@ -20,7 +20,7 @@ struct SettingsView: View {
             SyncSettings()
                 .tabItem { Label("Sync", systemImage: "icloud") }.tag("sync")
             KeychainSettings()
-                .tabItem { Label("Keychain", systemImage: "key.icloud") }.tag("keychain")
+                .tabItem { Label("Passwords", systemImage: "key.fill") }.tag("keychain")
         }
         .onReceive(NotificationCenter.default.publisher(for: .showSyncSettings)) { _ in tab = "sync" }
         .onReceive(NotificationCenter.default.publisher(for: .showSettingsTab)) { note in if let t = note.object as? String { tab = t } }
@@ -67,6 +67,13 @@ private struct GeneralSettings: View {
             }
             Section("Updates") {
                 UpdateSettingsRows()
+            }
+            Section("Privacy") {
+                Toggle("Show news in the Welcome window", isOn: Binding(
+                    get: { AnnouncementCenter.shared.newsEnabled },
+                    set: { AnnouncementCenter.shared.newsEnabled = $0 }))
+                Text("MacTerm+ only downloads from GitHub: the update check, and the Welcome news if this is on. It never sends your sessions, server names, user names or passwords anywhere; your servers are contacted only when you connect to them.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Section {
                 Button("Reset All Settings…", role: .destructive) { confirmReset = true }
@@ -459,6 +466,7 @@ private struct KeychainSettings: View {
 
     var body: some View {
         Form {
+            PasswordStorageSection()
             Section("iCloud Keychain (direct)") {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: Keychain.iCloudAvailable ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
@@ -508,7 +516,7 @@ private struct KeychainSettings: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 620)
+        .frame(height: 700)
         .onAppear { serverCount = Keychain.serverEntries().count }
     }
 

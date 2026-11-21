@@ -13,6 +13,8 @@ struct ContentView: View {
     @ViewState private var showExport = false
     @ViewState private var panel: SidebarPanel = .sessions
     @ViewState private var showSidebar = true
+    @ViewState private var showUnlock = false
+    @ViewState private var pendingConnect: SessionProfile?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -45,6 +47,13 @@ struct ContentView: View {
             PasswordPrompt(profile: profile) { pw in workspace.open(profile, secret: pw) }
         }
         .sheet(isPresented: $showImport) { ImportSessionsView().environmentObject(store) }
+        .sheet(isPresented: $showUnlock) {
+            MasterPasswordSheet(mode: .unlock, onSkip: { pendingConnect.map(askOrOpen); pendingConnect = nil },
+                                onForgot: { PasswordVault.shared.destroy(); Keychain.storage = .keychain }) { pw in
+                try PasswordVault.shared.unlock(master: pw)
+                if let p = pendingConnect { pendingConnect = nil; DispatchQueue.main.async { connect(p) } }
+            }
+        }
         .sheet(isPresented: $showExport) { ExportSessionsView().environmentObject(store) }
         .onChange(of: connectTarget) { _, target in
             guard let target else { return }
@@ -59,6 +68,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: Updater.showWindow)) { _ in openWindow(id: "update") }
         .onReceive(NotificationCenter.default.publisher(for: AnnouncementCenter.showWindow)) { _ in openWindow(id: "welcome") }
         .task {
+            if Keychain.vaultLocked && !Showcase.isOn { showUnlock = true }
             if !Showcase.isOn {
                 SyncManager.shared.attach(store: store)
                 TunnelManager.shared.startAutoTunnels(store: store)
@@ -70,6 +80,15 @@ struct ContentView: View {
     }
 
     private func connect(_ profile: SessionProfile) {
+        if Keychain.vaultLocked && profile.auth == .password {
+            pendingConnect = profile
+            showUnlock = true
+            return
+        }
+        askOrOpen(profile)
+    }
+
+    private func askOrOpen(_ profile: SessionProfile) {
         let secret = Keychain.read(account: profile.keychainAccount)
         let anonymousFTP = profile.kind.isFTP && profile.username.isEmpty
         if profile.auth == .password && secret == nil && !anonymousFTP {

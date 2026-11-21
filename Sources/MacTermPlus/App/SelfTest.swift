@@ -116,6 +116,43 @@ enum SelfTest {
             while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
             exit(0)
         }
+        if args.contains("--vault-test") {
+            // Tests (use MTP_DATA_DIR): vault create/save/read/lock/unlock/change, and moving secrets to and from the Keychain.
+            let v = PasswordVault.shared
+            func check(_ ok: Bool, _ what: String) { print((ok ? "✓ " : "✗ ") + what); if !ok { exit(1) } }
+            v.destroy()
+            do {
+                try v.create(master: "correct horse")
+                v.save("s3cret-A", account: "acct-A"); v.save("pässwörd-B ✓", account: "acct-B")
+                check(v.read(account: "acct-A") == "s3cret-A" && v.read(account: "acct-B") == "pässwörd-B ✓", "save + read")
+                let raw = (try? String(contentsOf: AppPaths.supportDirectory.appendingPathComponent("passwords.vault"), encoding: .utf8)) ?? ""
+                check(!raw.contains("s3cret") && !raw.contains("pässwörd"), "file contains no plain-text passwords")
+                v.lockNow(); check(v.read(account: "acct-A") == nil, "locked vault reveals nothing")
+                check((try? v.unlock(master: "wrong one")) == nil, "wrong master password rejected")
+                try v.unlock(master: "correct horse"); check(v.read(account: "acct-A") == "s3cret-A", "unlock with correct password")
+                try v.changeMaster(from: "correct horse", to: "new battery staple"); v.lockNow()
+                check((try? v.unlock(master: "correct horse")) == nil, "old master password no longer works")
+                try v.unlock(master: "new battery staple"); check(v.read(account: "acct-B") == "pässwörd-B ✓", "items kept after master change")
+                // Keychain ⇄ vault migration with throwaway accounts
+                let ids = ["mtp-test-\(UUID().uuidString)", "mtp-test-\(UUID().uuidString)"]
+                Keychain.storage = .keychain
+                Keychain.save("kc-one", account: ids[0]); Keychain.save("kc-two", account: ids[1])
+                let moved = Keychain.moveSecrets(to: .vault, accounts: ids)
+                check(moved == 2 && Keychain.storage == .vault && Keychain.read(account: ids[0]) == "kc-one", "Keychain → vault moved \(moved)")
+                Keychain.storage = .keychain
+                check(Keychain.read(account: ids[0]) == nil, "removed from Keychain after the move")
+                Keychain.storage = .vault
+                let back = Keychain.moveSecrets(to: .keychain, accounts: ids)
+                check(back == 2 && Keychain.read(account: ids[1]) == "kc-two", "vault → Keychain moved \(back)")
+                Keychain.storage = .vault
+                check(Keychain.read(account: ids[1]) == nil, "removed from vault after the move")
+                ids.forEach { Keychain.delete(account: $0) }
+                Keychain.storage = .keychain
+                v.destroy(); check(!v.exists, "vault erased")
+                print("VAULTTEST PASS")
+            } catch { print("VAULTTEST FAIL: \(error)"); exit(1) }
+            exit(0)
+        }
         if args.contains("--scan-test") {
             let t0 = Date()
             for src in InstalledClientScanner.scan() {
