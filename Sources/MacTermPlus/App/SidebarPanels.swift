@@ -125,6 +125,9 @@ private struct FilesPanelContent: View {
             RemoteFilePane(browser: browser, compact: true, selection: $selection)
             Divider()
             VStack(alignment: .leading, spacing: 6) {
+                if browser.canUseRoot {
+                    RootModeToggle(browser: browser)
+                }
                 if case .ssh(let t) = tab, !t.filesOnly {
                     Toggle(isOn: $browser.followTerminal) {
                         Label("Follow terminal folder", systemImage: "arrow.triangle.turn.up.right.diamond")

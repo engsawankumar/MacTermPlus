@@ -137,8 +137,11 @@ struct RemoteFilePane: View {
     var body: some View {
         VStack(spacing: 0) {
             toolbar
-            PathField(path: browser.path, history: browser.history, isLoading: browser.isLoading) { p in
-                Task { await browser.load(p) }
+            HStack(spacing: 6) {
+                if browser.isRoot { RootBadge() }
+                PathField(path: browser.path, history: browser.history, isLoading: browser.isLoading) { p in
+                    Task { await browser.load(p) }
+                }
             }
             .padding(.horizontal, 6).padding(.bottom, 5)
             if showFilter {
@@ -153,11 +156,18 @@ struct RemoteFilePane: View {
             }
             Divider()
             if let error = browser.errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(6)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if browser.errorIsPermission && browser.canUseRoot && !browser.isRoot {
+                        RootModeToggle(browser: browser, label: "Open as root (sudo)…", asButton: true)
+                            .controlSize(.small)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(6)
             }
             FileTable(items: browser.visibleItems, selection: $selection, compact: compact,
                       onOpen: { item in Task { await browser.open(item) } }) { ids in

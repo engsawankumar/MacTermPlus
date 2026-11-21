@@ -29,6 +29,25 @@ final class SSHTab: ObservableObject, Identifiable {
         filesOnly = profile.kind == .sftp
         mode = profile.kind == .sftp ? .commander : .terminal
         terminal.onDirectoryChange = { [weak remote] dir in remote?.terminalChangedDirectory(dir) }
+        if !Showcase.isOn {
+            let conn = connection
+            let user = profile.username
+            let loginPassword = profile.auth == .password ? secret : nil
+            remote.rootSwitcher = { typed in
+                // Try: the typed password → passwordless sudo → the login password (often the same).
+                let candidates: [String?] = typed != nil ? [typed] : [nil, loginPassword].filter { $0 == nil || $0?.isEmpty == false }
+                var lastError: Error = SudoError.needsPassword
+                for pw in candidates {
+                    do {
+                        try await SudoFileSystem.verify(connection: conn, password: pw, user: user)
+                        return SudoFileSystem(connection: conn, password: pw, user: user)
+                    } catch SudoError.notAllowed(let u) { throw SudoError.notAllowed(u) }
+                    catch { lastError = error }
+                }
+                if typed == nil, lastError is SudoError { throw SudoError.needsPassword }
+                throw lastError
+            }
+        }
         let profileID = profile.id
         stats.onOSDetected = { os in
             NotificationCenter.default.post(name: SessionStore.osDetected, object: nil,

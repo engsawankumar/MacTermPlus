@@ -116,6 +116,36 @@ enum SelfTest {
             while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
             exit(0)
         }
+        if let k = args.firstIndex(of: "--sudo-test"), args.count > k + 4 {
+            // --sudo-test host port user keyPath   (use MTP_SUDO_COMMAND=<stand-in sudo> for tests)
+            var p = SessionProfile(name: "sudo-test", host: args[k + 1], port: Int(args[k + 2]) ?? 22, username: args[k + 3])
+            p.auth = .privateKey; p.keyPath = args[k + 4]
+            let done = DispatchSemaphore(value: 0)
+            var failed = false
+            Task { @MainActor in
+                func check(_ ok: Bool, _ what: String) { print((ok ? "✓ " : "✗ ") + what); if !ok { failed = true } }
+                let conn = SSHConnection(profile: p, secret: nil)
+                do {
+                    do { try await SudoFileSystem.verify(connection: conn, password: nil, user: p.username); check(false, "no password") }
+                    catch SudoError.needsPassword { check(true, "asks for a password when sudo needs one") }
+                    do { try await SudoFileSystem.verify(connection: conn, password: "wrong", user: p.username); check(false, "wrong password") }
+                    catch SudoError.wrongPassword { check(true, "wrong sudo password rejected") }
+                    try await SudoFileSystem.verify(connection: conn, password: "letmein", user: p.username)
+                    check(true, "correct sudo password accepted")
+                    let fs = SudoFileSystem(connection: conn, password: "letmein", user: p.username)
+                    let odd = "/tmp/mtp sudo 'quote' test"
+                    try await fs.makeDirectory(odd)
+                    check(await fs.isDirectory(odd), "path with spaces and quotes handled safely")
+                    try await fs.removeDirectory(odd)
+                    try await testFileSystem(fs, label: "SUDO", remoteBase: "/tmp")
+                    print(failed ? "SUDOTEST FAIL" : "SUDOTEST PASS")
+                } catch { print("SUDOTEST FAIL: \(SSHConnection.describe(error))"); failed = true }
+                conn.disconnect()
+                done.signal()
+            }
+            while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            exit(failed ? 1 : 0)
+        }
         if args.contains("--keychain-noprompt-check") {
             // Reads the real passwords item but forbids any dialog: succeeds only if macOS would NOT prompt.
             // Prints counts only, never passwords.

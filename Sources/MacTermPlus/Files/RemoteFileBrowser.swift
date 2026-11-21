@@ -16,7 +16,12 @@ final class RemoteFileBrowser: ObservableObject {
     /// Live filter typed in the toolbar.
     @Published var filter = ""
 
-    let fs: RemoteFileSystem
+    private(set) var fs: RemoteFileSystem
+    /// Root mode (sudo): set for SSH/SFTP tabs. Takes a sudo password (nil = try without) and returns
+    /// a verified root file system.
+    var rootSwitcher: ((String?) async throws -> RemoteFileSystem)?
+    @Published private(set) var isRoot = false
+    private var normalFS: RemoteFileSystem?
     let title: String
     let queue = TransferQueue()
     private var editWatchers: [RemoteEditWatcher] = []
@@ -62,6 +67,33 @@ final class RemoteFileBrowser: ObservableObject {
     }
 
     func refresh() async { await load(path) }
+
+    var canUseRoot: Bool { rootSwitcher != nil }
+
+    /// Last error was a permission problem the root mode could solve.
+    var errorIsPermission: Bool {
+        guard let e = errorMessage?.lowercased() else { return false }
+        return e.contains("permission denied") || e.contains("not allowed to open")
+    }
+
+    /// Switch to root mode; throws SudoError.needsPassword when a password is required.
+    func enableRoot(password: String?) async throws {
+        guard let rootSwitcher, !isRoot else { return }
+        let rootFS = try await rootSwitcher(password)
+        normalFS = fs
+        fs = rootFS
+        isRoot = true
+        errorMessage = nil
+        await load(path.isEmpty ? "/" : path)
+    }
+
+    func disableRoot() async {
+        guard isRoot, let normalFS else { return }
+        fs = normalFS
+        isRoot = false
+        errorMessage = nil
+        await load(path)
+    }
     func goUp() async { await load(RemotePath.parent(path)) }
 
     /// Called when the terminal reports a new working directory.

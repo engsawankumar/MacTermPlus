@@ -123,6 +123,10 @@ Above every file list: **Up**, **Home**, **Refresh**, **Download**, **Upload**, 
 
 Select files or folders → **Permissions** (toolbar or right-click). Tick Read/Write/Execute for Owner, Group and Others, or type the octal value (e.g. 755), or pick a **preset** (644 files, 755 folders/scripts, 600 private keys…). For folders, **Apply to everything inside** changes the whole tree. Works over SFTP, FTP (via SITE CHMOD, if the server allows it) and on this Mac.
 
+### Permission denied? Browse as root
+
+If the server says **Permission denied**, the user you logged in as can't open or change that folder. If you have **sudo** rights, click **Open as root (sudo)…** in the message, or turn on **Browse as root (sudo)** at the bottom of the Files panel. A red **ROOT** badge shows while it's on. MacTerm+ asks for your sudo password if needed (usually your login password), keeps it only in memory for that tab, and sends it over the encrypted connection, never on the command line. Turn the switch off to go back to your normal user. Be careful: as root you can change system files.
+
 ### File info
 
 **Info** shows the full path, size, modified date, permissions (with the octal value), owner and group.

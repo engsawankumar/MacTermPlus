@@ -126,6 +126,10 @@ final class SSHConnection: ObservableObject {
         if let e = error as? LocalizedError, let d = e.errorDescription { return d }
         let text = String(describing: error)
         if text.contains("allAuthenticationOptionsFailed") { return "Authentication failed — check username, password or key." }
+        if text.contains("SSH_FX_PERMISSION_DENIED") || text.contains("permissionDenied") {
+            return "Permission denied — the user you logged in as isn’t allowed to open or change this. Use “Open as root (sudo)” if you have sudo rights, or ask the server’s admin."
+        }
+        if text.contains("SSH_FX_NO_SUCH_FILE") || text.contains("noSuchFile") { return "That file or folder doesn’t exist (anymore)." }
         if text.contains("keyExchangeNegotiationFailure") {
             let legacy = UserDefaults.standard.object(forKey: "ssh.legacyAlgorithms") as? Bool ?? true
             return legacy

@@ -3,6 +3,12 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.8
+- **Browse as root (sudo)** for SSH/SFTP sessions: open folders your user can't access, and upload, edit,
+  rename, chmod and delete as root. Turn it on from the Files panel or the **Open as root** button on a
+  “Permission denied” message. A red **ROOT** badge shows while it's on; the sudo password stays in memory only.
+- Clear messages instead of raw codes for “permission denied” and “no such file”.
+
 ## 1.0.7
 - Unticking **“Show this window when MacTerm+ opens”** now really keeps the Welcome window closed,
   also after updates.
