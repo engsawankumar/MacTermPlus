@@ -11,11 +11,12 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Use the newest Xcode (SwiftTerm needs Swift 6.2+)
         run: |
+          ls -d /Applications/Xcode*.app
           X=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
           sudo xcode-select -s "$X"
           xcodebuild -version
