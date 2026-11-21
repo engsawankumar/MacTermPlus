@@ -3,6 +3,11 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.2
+- New **Welcome window**: quick start (add a server, import, sync, guide) and news from the MacTerm+ team.
+  It opens on first launch, after an update, or when there's a new message; turn it off in the window or in Settings → General.
+- Help → **Welcome to MacTerm+** opens it any time.
+
 ## 1.0.1
 - First stable release of **MacTerm+**.
 - New **DMG installer**: open it and drag MacTerm+ to Applications.

@@ -95,6 +95,11 @@ User data is stored in `~/Library/Application Support/MacTermPlus/` (`sessions.j
 
 All of the code is original. The dependencies are permissive: SwiftTerm and Citadel (MIT), and SwiftNIO, swift-nio-ssh and swift-crypto (Apache-2.0). Their notices are in `THIRD_PARTY_NOTICES.md` and are copied into the app bundle. Run `./scripts/update-notices.sh` after changing dependencies.
 
+## Welcome window messages
+
+The Welcome window shows messages from [`announcements.json`](announcements.json): edit it on GitHub to
+publish news, tips or sponsored messages without releasing a new version. Format: [docs/ANNOUNCEMENTS.md](docs/ANNOUNCEMENTS.md).
+
 ## iCloud Keychain (Developer ID builds)
 
 Writing to iCloud Keychain requires an app signed with an Apple Developer ID and the Keychain Sharing entitlement (a provisioning profile for your bundle ID). With those:
