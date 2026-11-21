@@ -1,0 +1,18 @@
+# Compiles MacTerm+ on GitHub's Macs for every push and pull request, so problems show up before a release.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app
+        run: ./scripts/build-app.sh
+      - name: Smoke test
+        run: dist/MacTerm+.app/Contents/MacOS/MacTermPlus --distro-test | head -3

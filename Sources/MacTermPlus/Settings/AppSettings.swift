@@ -209,17 +209,11 @@ enum Appearance {
         view.selectedTextBackgroundColor = theme.nsSelection
         view.installColors(theme.swiftTermColors)
         view.optionAsMetaKey = s.optionAsMeta
-        view.getTerminalCursorStyleSetter(s.cursor.style(blink: s.cursorBlink))
+        view.setCursorStyle(s.cursor.style(blink: s.cursorBlink))
         // Also paint the backing layer so no other color shows around the text grid.
         view.wantsLayer = true
         view.layer?.backgroundColor = theme.nsBackground.cgColor
         view.needsDisplay = true
-    }
-}
-
-private extension TerminalView {
-    func getTerminalCursorStyleSetter(_ style: CursorStyle) {
-        setCursorStyle(style)
     }
 }
 
