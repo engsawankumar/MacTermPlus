@@ -21,6 +21,8 @@ struct SettingsView: View {
                 .tabItem { Label("Sync", systemImage: "icloud") }.tag("sync")
             KeychainSettings()
                 .tabItem { Label("Passwords", systemImage: "key.fill") }.tag("keychain")
+            KnownHostsSettings()
+                .tabItem { Label("Known Hosts", systemImage: "checkmark.shield") }.tag("knownhosts")
         }
         .onReceive(NotificationCenter.default.publisher(for: .showSyncSettings)) { _ in tab = "sync" }
         .onReceive(NotificationCenter.default.publisher(for: .showSettingsTab)) { note in if let t = note.object as? String { tab = t } }
@@ -170,13 +172,14 @@ private struct FileSettings: View {
                 Toggle("Show the Commands button in the toolbar (Quick Commands, ⇧⌘K)", isOn: $settings.quickCommandsButton)
                 Toggle("Ask before deleting files on the server", isOn: $settings.confirmDelete)
             }
+            FileAssociationsSection()
             Section {
                 Text("Tip: double-click a remote file to edit it in your default Mac app. Every save is uploaded automatically while the tab stays open.")
                     .font(.callout).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .frame(height: 240)
+        .frame(height: 520)
     }
 }
 
@@ -483,6 +486,7 @@ private struct KeychainSettings: View {
     var body: some View {
         Form {
             PasswordStorageSection()
+            SavedPasswordsSection()
             Section("iCloud Keychain (direct)") {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: Keychain.iCloudAvailable ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")

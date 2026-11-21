@@ -3,6 +3,16 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.1.0
+- **See your saved passwords**, safely: an 👁 button on the password in each session, and a **Saved passwords**
+  list in Settings → Passwords with search, show, copy and forget. Each needs **Touch ID or your Mac password**;
+  it stays unlocked for one minute, locks when you switch apps, and copied passwords leave the clipboard after a minute.
+- **Known Hosts** (Settings): every trusted server key with type, SHA256 fingerprint and the sessions using it.
+  Import from `~/.ssh/known_hosts`, export, copy fingerprints, and remove a key after a server is reinstalled.
+- **File types**: choose the app for each extension (e.g. `.xml` → your editor) in Settings → Files, or
+  right-click → Open With → Always Open … With. Synced with your settings.
+- Every release is checked first for private data (keys, real IP addresses, e-mail addresses).
+
 ## 1.0.10
 - **Sync setup assistant** (Sync → Set Up Sync…), in three steps: choose **iCloud Drive or Google Drive**,
   pick **what to sync** (Sessions, Passwords, Settings, Macros & Quick Commands, Tunnels; all ticked, with

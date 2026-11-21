@@ -226,6 +226,7 @@ struct SessionEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ViewState var profile: SessionProfile
     @ViewState private var secret = ""
+    @ViewState private var storedSecret: String?
     @ViewState private var saveSecret = true
     var onSaveAndConnect: (SessionProfile, String?) -> Void
 
@@ -298,9 +299,9 @@ struct SessionEditor: View {
                             TextField("Key file", text: $profile.keyPath, prompt: Text("~/.ssh/id_ed25519"))
                             Button("Choose…") { chooseKey() }
                         }
-                        SecureField("Passphrase", text: $secret, prompt: Text("Leave empty if none"))
+                        RevealableSecretField(title: "Passphrase", text: $secret, prompt: "Leave empty if none", savedValue: storedSecret)
                     } else {
-                        SecureField("Password", text: $secret, prompt: Text(saveSecret ? "" : "Asked when connecting"))
+                        RevealableSecretField(title: "Password", text: $secret, prompt: saveSecret ? "" : "Asked when connecting", savedValue: storedSecret)
                     }
                     Toggle(Keychain.storage == .vault ? "Save in the MacTerm+ vault" : "Save in the Keychain", isOn: $saveSecret)
                 }
@@ -329,7 +330,7 @@ struct SessionEditor: View {
         .frame(width: 540, height: 760)
         .onAppear {
             if profile.auth == .privateKey && profile.keyPath.isEmpty { profile.keyPath = defaultKeyPath() }
-            if let s = Keychain.read(account: profile.keychainAccount) { secret = s }
+            if let s = Keychain.read(account: profile.keychainAccount) { secret = s; storedSecret = s }
         }
         .onChange(of: profile.kind) { old, new in
             if profile.port == old.defaultPort { profile.port = new.defaultPort }

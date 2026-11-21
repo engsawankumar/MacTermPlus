@@ -15,6 +15,13 @@ enum SelfTest {
             try? HelpContent.markdown().write(toFile: args[h + 1], atomically: true, encoding: .utf8)
             exit(0)
         }
+        if let k = args.firstIndex(of: "--knownhosts-import"), args.count > k + 1 {
+            // Tests: MTP_DATA_DIR=… MacTermPlus --knownhosts-import <file>
+            let r = KnownHosts.shared.importOpenSSH((try? String(contentsOfFile: args[k + 1], encoding: .utf8)) ?? "")
+            print("IMPORT added=\(r.added) skipped=\(r.skipped)")
+            for e in KnownHosts.shared.all() { print("HOST \(e.host) \(e.port) \(e.keyLabel) \(e.fingerprint)") }
+            exit(0)
+        }
         if let k = args.firstIndex(of: "--sync-once"), args.count > k + 1 {
             // Tests: MTP_DATA_DIR=<device dir> MacTermPlus --sync-once <folder> [add:<name>] [delete:<name>]
             let done = DispatchSemaphore(value: 0)

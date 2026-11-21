@@ -186,7 +186,8 @@ final class AppSettings: ObservableObject {
     static let syncKeys = ["appearance", "accent", "confirmCloseTab", "iconStyle", "compactSidebar", "coloredTabs",
                            "showOSIcons", "confirmMultilinePaste", "themeID", "fontName", "fontSize", "cursor", "cursorBlink",
                            "optionAsMeta", "copyOnSelect", "terminalPadding", "showHiddenFiles", "confirmDelete",
-                           "followTerminalFolder", "quickCommandsButton", "showStatusBar", "statusItems", "statusInterval"]
+                           "followTerminalFolder", "quickCommandsButton", "showStatusBar", "statusItems", "statusInterval",
+                           FileAssociations.key]
 
     func resetToDefaults() {
         for key in Self.syncKeys + ["colorfulIcons"] { d.removeObject(forKey: key) }

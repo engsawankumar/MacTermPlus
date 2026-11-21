@@ -167,3 +167,15 @@ run `./scripts/update-notices.sh` after changing dependencies.
 
 Remote and dynamic (SOCKS) tunnels, jump hosts, ssh-agent support, folder sync with a diff preview,
 X11 forwarding, CBC ciphers for very old devices, and RDP/VNC launchers.
+
+## Private data check
+
+`scripts/check-secrets.py` runs before every release (and in CI). It refuses keys, keychains, vaults and
+sync files, private-key blocks, IPv4 addresses outside the documentation ranges (192.0.2.x, 198.51.100.x,
+203.0.113.x), and e-mail addresses other than `@example.com` / GitHub no-reply. For your own real host
+names, IPs and e-mail, add them one per line to `~/.macterm-signing/secret-patterns.txt` (outside the repo).
+To check every commit too, install the hook:
+
+```bash
+printf '#!/bin/sh\nexec python3 "$(git rev-parse --show-toplevel)/scripts/check-secrets.py" --staged\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```

@@ -26,6 +26,8 @@ if [ $DRY_RUN -eq 0 ] && command -v gh >/dev/null && gh release view "$TAG" --re
   echo "Release $TAG already exists on github.com/$GITHUB_REPO — nothing to do."; exit 0
 fi
 
+echo "▸ Checking for private data"
+python3 scripts/check-secrets.py
 echo "▸ Building MacTerm+ $VERSION for $GITHUB_REPO"
 VERSION="$VERSION" GITHUB_REPO="$GITHUB_REPO" ./scripts/build-app.sh
 

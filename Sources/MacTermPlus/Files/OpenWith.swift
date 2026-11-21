@@ -27,13 +27,13 @@ enum OpenWith {
     }
 
     static func defaultApp(for fileName: String) -> App? {
-        NSWorkspace.shared.urlForApplication(toOpen: type(for: fileName)).map(App.init(url:))
+        (FileAssociations.app(for: fileName) ?? NSWorkspace.shared.urlForApplication(toOpen: type(for: fileName))).map(App.init(url:))
     }
 
     /// Apps registered for this file type, plus installed text editors. Default app first, no duplicates.
     static func apps(for fileName: String) -> (suggested: [App], editors: [App]) {
         let t = type(for: fileName)
-        let def = NSWorkspace.shared.urlForApplication(toOpen: t)
+        let def = FileAssociations.app(for: fileName) ?? NSWorkspace.shared.urlForApplication(toOpen: t)
         var seen = Set<String>()
         var suggested: [App] = []
         for url in ([def].compactMap { $0 } + NSWorkspace.shared.urlsForApplications(toOpen: t)) {
@@ -50,7 +50,7 @@ enum OpenWith {
     }
 
     static func open(_ file: URL, with app: URL?) {
-        guard let app else {
+        guard let app = app ?? FileAssociations.app(for: file.lastPathComponent) else {
             NSWorkspace.shared.open(file)
             return
         }
@@ -92,6 +92,12 @@ struct OpenWithMenu: View {
             }
             Divider()
             Button("Other…") { if let app = OpenWith.chooseApp() { action(app) } }
+            let ext = (fileName as NSString).pathExtension
+            if !ext.isEmpty {
+                Button("Always Open .\(ext) Files With…") {
+                    if let app = OpenWith.chooseApp() { FileAssociations.set(ext, app: app); action(app) }
+                }
+            }
         }
     }
 }

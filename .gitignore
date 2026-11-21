@@ -5,3 +5,20 @@ dist/
 xcuserdata/
 DerivedData/
 .DS_Store
+
+# Never publish keys, passwords or synced data
+*.pem
+*.p12
+*.key
+*.keychain
+*.keychain-db
+*.vault
+id_rsa
+id_ed25519
+id_ecdsa
+sync.json
+known_hosts
+known_hosts.json
+.env
+.env.*
+secret-patterns.txt

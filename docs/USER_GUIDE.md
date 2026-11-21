@@ -259,6 +259,18 @@ The session must use a private key, or have its password saved in the Keychain, 
 
 ## Macros & Tools
 
+### Seeing saved passwords
+
+**Seeing a saved password:** click the 👁 next to the password in a session, or open **Settings → Passwords → Saved passwords**. macOS asks for **Touch ID or your Mac password** first. After that, passwords can be shown for one minute; they hide again when the minute ends or when you switch to another app. **Copy** puts a password on the clipboard and clears it after a minute. Passwords are never written to logs and never synced in plain text.
+
+### Known hosts
+
+**Settings → Known Hosts** lists every server key MacTerm+ trusts, with its type (ED25519, RSA, ECDSA), its SHA256 fingerprint (the same one `ssh-keygen -l` shows) and the sessions that use it. **Import** adds the hosts from `~/.ssh/known_hosts` or another file (hashed lines can’t be read and are skipped); **Export** writes an OpenSSH known_hosts file. If a server was reinstalled and its key changed, MacTerm+ refuses to connect; remove the old key here and connect again.
+
+### File types
+
+**Settings → Files → Open file types with**: choose the app for an extension (for example `.xml` → your code editor, `.log` → Console). Double-clicking a file then always uses that app. You can also right-click a file → **Open With → Always Open .xml Files With…**.
+
 ### Quick Commands
 
 Click **Commands** in the toolbar (or press **⇧⌘K**) to open the Quick Commands panel on the right; click **✕** or press ⇧⌘K again to close it. It holds ready-made server commands in folders (**Common**, **System & Logs**, **Apache**, **LiteSpeed**, **Nginx**, **MySQL / MariaDB**, **PHP**, **Docker**, **Firewall & Network**, **Updates**). The 10 most used, such as top -c, htop, disk check and restarting Apache, LiteSpeed, Nginx or MySQL, are **starred** and shown at the top. Click ☆ on any command to star it too.
