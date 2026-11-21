@@ -92,6 +92,7 @@ enum HelpContent {
             ("Port checker", "Checks whether a TCP port on any host can be reached from this Mac, and how fast it answers."),
         ]),
         HelpTopic(id: "sync", title: "Sync Across Macs", icon: "icloud.fill", color: .blue, sections: [
+            ("Set up", "Click **Sync** in the toolbar → **Set Up Sync…** (or Settings → Sync → Set Up Sync…). The assistant has three steps: **1. Where**: choose iCloud Drive or Google Drive (or another cloud folder). **2. What**: Sessions, Passwords, Settings, Macros & Quick Commands and Tunnels are all ticked; untick anything that should stay on this Mac only. Passwords need a sync passphrase, the same on every Mac. **3. Allow**: macOS asks whether MacTerm+ may use that drive; click Allow. MacTerm+ then syncs once and shows which Macs are connected. Run it on each Mac and pick the same drive. The first Mac shares its settings; Macs that join take the shared settings. You can change any choice later in Settings → Sync → What to sync."),
             ("How it works", "MacTerm+ keeps a small file (`MacTermPlus/sync.json`) in a cloud folder you choose. Each Mac reads it, merges it with its own sessions, macros and tunnels, and writes the result back. Changes from different Macs combine; for the same session the newest edit wins, and deletions sync too."),
             ("iCloud Drive", "Turn on iCloud Drive in System Settings → Apple Account → iCloud. Then in MacTerm+: **Settings → Sync** → iCloud Drive → **Use**. Do the same on your other Macs."),
             ("Google Drive", "Install **Google Drive for desktop** and sign in. Your Drive then appears in **Settings → Sync**; click **Use**. Dropbox, OneDrive and Box are detected the same way, or click **Choose Folder…** for any folder that your cloud app syncs."),
@@ -117,7 +118,7 @@ enum HelpContent {
             ("Files", "Show hidden files by default; confirm before deleting on the server."),
             ("Status Bar", "Show or hide the server info bar, pick its items, and set how often it refreshes."),
             ("Sessions", "Import, export, and open the data folder (`~/Library/Application Support/MacTermPlus`)."),
-            ("Sync", "Choose iCloud Drive, Google Drive, Dropbox, OneDrive or any folder; optionally sync passwords with an encryption passphrase; see your devices."),
+            ("Sync", "The setup assistant (Set Up Sync…), what to sync (sessions, settings, macros & quick commands, tunnels), the drive (iCloud Drive, Google Drive, Dropbox, OneDrive or any folder); optionally sync passwords with an encryption passphrase; see your devices."),
             ("Keychain", "iCloud Keychain status, Passwords-app export/import, and importing servers saved by other apps."),
         ]),
         HelpTopic(id: "shortcuts", title: "Keyboard Shortcuts", icon: "keyboard.fill", color: .indigo, sections: [

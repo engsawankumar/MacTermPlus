@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import CommonCrypto
 import CryptoKit
 import Foundation
@@ -77,6 +78,9 @@ struct SyncDocument: Codable {
     var quickCommands: [QuickCommand] = []
     var quickFolders: [String] = []
     var quickCommandsModified = Date.distantPast
+    /// App preferences as a binary property list (types kept exactly).
+    var settings: Data?
+    var settingsModified = Date.distantPast
     var devices: [DeviceInfo] = []
     var vault: SecretVault?
 
@@ -96,6 +100,8 @@ struct SyncDocument: Codable {
         quickCommands = (try? c.decodeIfPresent([QuickCommand].self, forKey: .quickCommands)) ?? []
         quickFolders = (try? c.decodeIfPresent([String].self, forKey: .quickFolders)) ?? []
         quickCommandsModified = (try? c.decodeIfPresent(Date.self, forKey: .quickCommandsModified)) ?? .distantPast
+        settings = try? c.decodeIfPresent(Data.self, forKey: .settings)
+        settingsModified = (try? c.decodeIfPresent(Date.self, forKey: .settingsModified)) ?? .distantPast
         devices = try c.decodeIfPresent([DeviceInfo].self, forKey: .devices) ?? []
         vault = try c.decodeIfPresent(SecretVault.self, forKey: .vault)
     }
@@ -151,6 +157,13 @@ final class SyncManager: ObservableObject {
     @Published var enabled: Bool { didSet { d.set(enabled, forKey: "sync.enabled"); if enabled { scheduleSync(0.2) } } }
     @Published var folderPath: String { didSet { d.set(folderPath, forKey: "sync.folder") } }
     @Published var syncPasswords: Bool { didSet { d.set(syncPasswords, forKey: "sync.passwords") } }
+    // What to sync (all on unless turned off).
+    @Published var syncSessions: Bool { didSet { d.set(syncSessions, forKey: "sync.sessions") } }
+    @Published var syncSettings: Bool { didSet { d.set(syncSettings, forKey: "sync.settings") } }
+    @Published var syncMacros: Bool { didSet { d.set(syncMacros, forKey: "sync.macros") } }
+    @Published var syncTunnels: Bool { didSet { d.set(syncTunnels, forKey: "sync.tunnels") } }
+    /// True while synced settings are being applied (so that doesn't count as a local change).
+    private var applyingSettings = false
 
     @Published private(set) var isSyncing = false
     @Published private(set) var lastSync: Date?
@@ -162,6 +175,7 @@ final class SyncManager: ObservableObject {
     private var pending: Task<Void, Never>?
     private var pollTimer: Timer?
     private var lastSeenRemote: Date?
+    private var settingsWatch: AnyCancellable?
 
     let deviceID: String
     var deviceName: String { Host.current().localizedName ?? "Mac" }
@@ -170,6 +184,10 @@ final class SyncManager: ObservableObject {
         enabled = d.bool(forKey: "sync.enabled")
         folderPath = d.string(forKey: "sync.folder") ?? ""
         syncPasswords = d.bool(forKey: "sync.passwords")
+        syncSessions = d.object(forKey: "sync.sessions") as? Bool ?? true
+        syncSettings = d.object(forKey: "sync.settings") as? Bool ?? true
+        syncMacros = d.object(forKey: "sync.macros") as? Bool ?? true
+        syncTunnels = d.object(forKey: "sync.tunnels") as? Bool ?? true
         if let id = ProcessInfo.processInfo.environment["MTP_DEVICE_ID"] { deviceID = id }   // tests only
         else if let id = d.string(forKey: "sync.deviceID") { deviceID = id } else {
             deviceID = UUID().uuidString
@@ -208,6 +226,13 @@ final class SyncManager: ObservableObject {
             MainActor.assumeIsolated {
                 UserDefaults.standard.set(Date(), forKey: "sync.quickCommandsModified")
                 self?.scheduleSync(2)
+            }
+        }
+        settingsWatch = AppSettings.shared.objectWillChange.sink { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, !self.applyingSettings else { return }
+                UserDefaults.standard.set(Date(), forKey: "sync.settingsModified")
+                if self.syncSettings { self.scheduleSync(3) }
             }
         }
         nc.addObserver(forName: TunnelManager.changed, object: nil, queue: .main) { [weak self] _ in
@@ -258,6 +283,46 @@ final class SyncManager: ObservableObject {
         } catch {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
+    }
+
+    /// Is there already a sync file (from another Mac) in this folder?
+    static func existingSync(in folder: URL) -> SyncDocument? {
+        read(folder.appendingPathComponent("MacTermPlus/sync.json"))
+    }
+
+    /// Creates the MacTermPlus folder and a test file in the cloud folder. This is what makes macOS
+    /// ask for permission to use iCloud Drive / Google Drive; throws a clear message if access is denied.
+    nonisolated static func requestAccess(to folder: URL) throws {
+        let fm = FileManager.default
+        let dir = folder.appendingPathComponent("MacTermPlus", isDirectory: true)
+        do {
+            _ = try fm.contentsOfDirectory(atPath: folder.path)
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            let probe = dir.appendingPathComponent(".access-check")
+            try Data("ok".utf8).write(to: probe)
+            try? fm.removeItem(at: probe)
+        } catch {
+            throw SyncError.unavailable("MacTerm+ can’t use this folder yet. Allow access when macOS asks, or turn it on in System Settings → Privacy & Security → Files and Folders (MacTerm+), then try again.")
+        }
+    }
+
+    /// Finishes the setup assistant: saves the choices, turns sync on and syncs once.
+    func finishSetup(folder: URL, sessions: Bool, passwords: Bool, passphrase: String?, settings: Bool,
+                     macros: Bool, tunnels: Bool) async {
+        guard !Showcase.isOn else { return }   // screenshots never change the real setup
+        let joining = Self.existingSync(in: folder) != nil
+        folderPath = folder.path
+        syncSessions = sessions
+        syncSettings = settings
+        syncMacros = macros
+        syncTunnels = tunnels
+        if let passphrase, !passphrase.isEmpty { self.passphrase = passphrase }
+        syncPasswords = passwords && sessions && self.passphrase != nil
+        // The first Mac shares its settings; Macs that join take the shared ones.
+        if !joining { d.set(Date(), forKey: "sync.settingsModified") }
+        enabled = true
+        pending?.cancel()
+        await syncNow()
     }
 
     func removeDevice(_ device: DeviceInfo) {
@@ -328,6 +393,16 @@ final class SyncManager: ObservableObject {
         local.quickCommands = QuickCommandStore.shared.commands
         local.quickFolders = QuickCommandStore.shared.folders
         local.quickCommandsModified = ud.object(forKey: "sync.quickCommandsModified") as? Date ?? .distantPast
+        local.settings = AppSettings.shared.syncSnapshot()
+        local.settingsModified = ud.object(forKey: "sync.settingsModified") as? Date ?? .distantPast
+        // Items this Mac doesn't sync: leave the cloud copy as it is and don't take it either.
+        if !manager.syncSessions { local.sessions = []; local.deleted = [:] }
+        if !manager.syncMacros {
+            local.macros = []; local.macrosModified = .distantPast
+            local.quickCommands = []; local.quickFolders = []; local.quickCommandsModified = .distantPast
+        }
+        if !manager.syncTunnels { local.tunnels = []; local.tunnelsModified = .distantPast }
+        if !manager.syncSettings { local.settings = nil; local.settingsModified = .distantPast }
 
         var merged = merge(remote, local)
         let before = Set(store.sessions.map(\.id))
@@ -335,7 +410,7 @@ final class SyncManager: ObservableObject {
 
         // Passwords (optional, end-to-end encrypted with the sync passphrase).
         var secretsIn = 0
-        if manager.syncPasswords, let pass = manager.passphrase {
+        if manager.syncPasswords && manager.syncSessions, let pass = manager.passphrase {
             var vault = remote.vault
             let key: SymmetricKey
             if let v = vault, let salt = Data(base64Encoded: v.salt) {
@@ -377,25 +452,32 @@ final class SyncManager: ObservableObject {
 
         // Apply to this Mac.
         let tomb = Dictionary(uniqueKeysWithValues: merged.deleted.compactMap { k, v in UUID(uuidString: k).map { ($0, v) } })
-        if merged.sessions != store.sessions || tomb != store.deleted {
+        if manager.syncSessions, merged.sessions != store.sessions || tomb != store.deleted {
             store.applySynced(sessions: merged.sessions, deleted: tomb)
         }
-        if merged.macrosModified > local.macrosModified {
+        if manager.syncMacros, merged.macrosModified > local.macrosModified {
             MacroStore.shared.replaceAll(merged.macros)
             ud.set(merged.macrosModified, forKey: "sync.macrosModified")
         }
-        if merged.tunnelsModified > local.tunnelsModified {
+        if manager.syncTunnels, merged.tunnelsModified > local.tunnelsModified {
             TunnelManager.shared.replaceAll(merged.tunnels)
             ud.set(merged.tunnelsModified, forKey: "sync.tunnelsModified")
         }
-        if merged.quickCommandsModified > local.quickCommandsModified {
+        if manager.syncMacros, merged.quickCommandsModified > local.quickCommandsModified {
             QuickCommandStore.shared.replaceAll(commands: merged.quickCommands, folders: merged.quickFolders)
             ud.set(merged.quickCommandsModified, forKey: "sync.quickCommandsModified")
         }
+        if manager.syncSettings, merged.settingsModified > local.settingsModified, let data = merged.settings {
+            manager.applyingSettings = true
+            AppSettings.shared.applySynced(data)
+            manager.applyingSettings = false
+            ud.set(merged.settingsModified, forKey: "sync.settingsModified")
+        }
         manager.devices = merged.devices
 
-        let added = after.subtracting(before).count, removed = before.subtracting(after).count
-        var parts = ["\(merged.sessions.count) sessions"]
+        let added = manager.syncSessions ? after.subtracting(before).count : 0
+        let removed = manager.syncSessions ? before.subtracting(after).count : 0
+        var parts = [manager.syncSessions ? "\(merged.sessions.count) sessions" : "sessions not synced"]
         if added > 0 { parts.append("\(added) new") }
         if removed > 0 { parts.append("\(removed) removed") }
         if secretsIn > 0 { parts.append("\(secretsIn) passwords received") }
@@ -428,6 +510,8 @@ final class SyncManager: ObservableObject {
         } else {
             out.quickCommands = b.quickCommands; out.quickFolders = b.quickFolders; out.quickCommandsModified = b.quickCommandsModified
         }
+        if a.settingsModified >= b.settingsModified { out.settings = a.settings ?? b.settings; out.settingsModified = a.settingsModified }
+        else { out.settings = b.settings; out.settingsModified = b.settingsModified }
         var devs: [String: DeviceInfo] = [:]
         for dv in a.devices + b.devices where (devs[dv.id]?.lastSync ?? .distantPast) < dv.lastSync { devs[dv.id] = dv }
         out.devices = Array(devs.values)

@@ -47,6 +47,11 @@ struct MacTermPlusApp: App {
         }
         .windowResizability(.contentSize)
 
+        Window("Set Up Sync", id: "sync-setup") {
+            SyncSetupView()
+        }
+        .windowResizability(.contentSize)
+
         Window("MacTerm+ Help", id: "help") {
             HelpView()
         }

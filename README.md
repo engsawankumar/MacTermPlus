@@ -40,7 +40,7 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 | 🔀 **Tunnels** | Reach databases and admin pages behind a server through a port on your Mac |
 | ⌨️ **MultiExec** | Type once, run in every open terminal |
 | ⬇️ **Import** | Finds sessions saved by other apps on this Mac (including Windows apps in compatibility layers), plus `~/.ssh/config`, CSV and the Passwords app |
-| ☁️ **Sync** | Keep sessions, macros, quick commands and tunnels the same on all your Macs with iCloud Drive or Google Drive; passwords optional and end-to-end encrypted |
+| ☁️ **Sync** | Keep sessions, settings, macros, quick commands and tunnels the same on all your Macs with iCloud Drive or Google Drive, set up in three steps; passwords optional and end-to-end encrypted |
 | 🎨 **Make it yours** | Colors and OS icons for servers, fonts, padding, icon styles, accent colors |
 
 ## Screenshots

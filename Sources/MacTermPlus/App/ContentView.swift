@@ -68,6 +68,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .importSessions)) { _ in showImport = true }
         .onReceive(NotificationCenter.default.publisher(for: .exportSessions)) { _ in showExport = true }
         .onReceive(NotificationCenter.default.publisher(for: .showHelp)) { _ in openWindow(id: "help") }
+        .onReceive(NotificationCenter.default.publisher(for: .debugOpenWindow)) { n in if let id = n.object as? String { openWindow(id: id) } }
         .onReceive(NotificationCenter.default.publisher(for: .showSettings)) { _ in openSettings() }
         .onReceive(NotificationCenter.default.publisher(for: Updater.showWindow)) { _ in openWindow(id: "update") }
         .onReceive(NotificationCenter.default.publisher(for: AnnouncementCenter.showWindow)) { _ in openWindow(id: "welcome") }
@@ -262,6 +263,7 @@ private struct ToolButton: View {
 private struct SyncPopover: View {
     @ObservedObject var sync = SyncManager.shared
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -289,12 +291,13 @@ private struct SyncPopover: View {
                 HStack {
                     Button(sync.isSyncing ? "Syncing…" : "Sync Now") { Task { await sync.syncNow() } }.disabled(sync.isSyncing)
                     Spacer()
-                    Button("Settings…") { openSettings() }
+                    Button("Change Setup…") { openWindow(id: "sync-setup") }
+                    Button("Settings…") { openSettings(); NotificationCenter.default.post(name: .showSyncSettings, object: nil) }
                 }
             } else {
-                Text("Keep sessions, macros and tunnels the same on all your Macs using iCloud Drive or Google Drive.")
+                Text("Keep sessions, passwords, settings, macros and tunnels the same on all your Macs using iCloud Drive or Google Drive.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Button("Set Up Sync…") { openSettings(); NotificationCenter.default.post(name: .showSyncSettings, object: nil) }
+                Button("Set Up Sync…") { openWindow(id: "sync-setup") }.buttonStyle(.borderedProminent)
             }
         }
         .padding(14)
@@ -805,4 +808,5 @@ extension Notification.Name {
     static let newSession = Notification.Name("MacTermPlus.newSession")
     static let showSettings = Notification.Name("MacTermPlus.showSettings")
     static let showSyncSettings = Notification.Name("MacTermPlus.showSyncSettings")
+    static let debugOpenWindow = Notification.Name("MacTermPlus.debugOpenWindow")
 }

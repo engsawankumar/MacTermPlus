@@ -182,18 +182,43 @@ final class AppSettings: ObservableObject {
         return ["SF Mono"] + names.filter { $0 != "SF Mono" }.sorted()
     }()
 
+    /// Preferences that follow the user to other Macs (window state and per-Mac things are left out).
+    static let syncKeys = ["appearance", "accent", "confirmCloseTab", "iconStyle", "compactSidebar", "coloredTabs",
+                           "showOSIcons", "confirmMultilinePaste", "themeID", "fontName", "fontSize", "cursor", "cursorBlink",
+                           "optionAsMeta", "copyOnSelect", "terminalPadding", "showHiddenFiles", "confirmDelete",
+                           "followTerminalFolder", "quickCommandsButton", "showStatusBar", "statusItems", "statusInterval"]
+
     func resetToDefaults() {
-        for key in ["appearance", "accent", "confirmCloseTab", "colorfulIcons", "iconStyle", "compactSidebar", "themeID",
-                    "fontName", "fontSize", "cursor", "cursorBlink", "optionAsMeta", "copyOnSelect", "terminalPadding",
-                    "showHiddenFiles", "confirmDelete", "followTerminalFolder", "showStatusBar", "statusItems", "statusInterval"] {
-            d.removeObject(forKey: key)
+        for key in Self.syncKeys + ["colorfulIcons"] { d.removeObject(forKey: key) }
+        reload()
+    }
+
+    /// The synced preferences as a binary property list.
+    func syncSnapshot() -> Data? {
+        var dict: [String: Any] = [:]
+        for k in Self.syncKeys { if let v = d.object(forKey: k) { dict[k] = v } }
+        return try? PropertyListSerialization.data(fromPropertyList: dict, format: .binary, options: 0)
+    }
+
+    /// Applies preferences that came from another Mac.
+    func applySynced(_ data: Data) {
+        guard let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return }
+        for k in Self.syncKeys {
+            if let v = dict[k] { d.set(v, forKey: k) } else { d.removeObject(forKey: k) }
         }
+        reload()
+    }
+
+    /// Re-reads every preference from UserDefaults.
+    private func reload() {
         let fresh = AppSettings()
         appearance = fresh.appearance; accent = fresh.accent; confirmCloseTab = fresh.confirmCloseTab
-        iconStyle = fresh.iconStyle; compactSidebar = fresh.compactSidebar; themeID = fresh.themeID
+        iconStyle = fresh.iconStyle; compactSidebar = fresh.compactSidebar; coloredTabs = fresh.coloredTabs
+        showOSIcons = fresh.showOSIcons; confirmMultilinePaste = fresh.confirmMultilinePaste; themeID = fresh.themeID
         fontName = fresh.fontName; fontSize = fresh.fontSize; cursor = fresh.cursor; cursorBlink = fresh.cursorBlink
-        optionAsMeta = fresh.optionAsMeta; copyOnSelect = fresh.copyOnSelect; terminalPadding = fresh.terminalPadding; showHiddenFiles = fresh.showHiddenFiles
-        confirmDelete = fresh.confirmDelete; followTerminalFolder = fresh.followTerminalFolder; showStatusBar = fresh.showStatusBar; statusItems = fresh.statusItems
+        optionAsMeta = fresh.optionAsMeta; copyOnSelect = fresh.copyOnSelect; terminalPadding = fresh.terminalPadding
+        showHiddenFiles = fresh.showHiddenFiles; confirmDelete = fresh.confirmDelete; followTerminalFolder = fresh.followTerminalFolder
+        quickCommandsButton = fresh.quickCommandsButton; showStatusBar = fresh.showStatusBar; statusItems = fresh.statusItems
         statusInterval = fresh.statusInterval
     }
 

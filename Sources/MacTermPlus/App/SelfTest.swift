@@ -28,10 +28,13 @@ enum SelfTest {
                 }
                 let m = SyncManager.shared
                 m.folderPath = args[k + 1]
+                m.syncSessions = !args.contains("nosessions")
+                m.syncSettings = !args.contains("nosettings")
                 m.attach(store: store)
+                for a in args where a.hasPrefix("theme:") { AppSettings.shared.themeID = String(a.dropFirst(6)) }
                 m.enabled = true
                 await m.syncNow()
-                print("SYNC \(m.lastError ?? "ok") | \(m.lastSummary) | sessions=\(store.sessions.map(\.name).sorted().joined(separator: ","))")
+                print("SYNC \(m.lastError ?? "ok") | \(m.lastSummary) | sessions=\(store.sessions.map(\.name).sorted().joined(separator: ",")) | theme=\(AppSettings.shared.themeID)")
                 done.signal()
             }
             while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
@@ -411,6 +414,8 @@ enum DebugHooks {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .showSettings, object: nil) }
         } else if env["MTP_OPEN"] == "welcome" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: AnnouncementCenter.showWindow, object: nil) }
+        } else if env["MTP_OPEN"] == "sync-setup" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .debugOpenWindow, object: "sync-setup") }
         } else if env["MTP_OPEN"] == "import" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .importSessions, object: nil) }
         }

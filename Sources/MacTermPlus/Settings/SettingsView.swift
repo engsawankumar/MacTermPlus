@@ -347,6 +347,7 @@ extension Notification.Name {
 
 private struct SyncSettings: View {
     @ObservedObject var sync = SyncManager.shared
+    @Environment(\.openWindow) private var openWindow
     @ViewState private var locations: [SyncLocation] = []
     @ViewState private var passphrase = ""
     @ViewState private var passphraseSaved = false
@@ -354,7 +355,15 @@ private struct SyncSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Sync sessions, macros and tunnels across my Macs", isOn: $sync.enabled)
+                HStack {
+                    Text(sync.enabled ? "Sync is set up. Run the assistant again to change the drive or what is synced."
+                                      : "The setup assistant walks you through it: choose iCloud Drive or Google Drive, pick what to sync, allow access.")
+                        .font(.callout).fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Button(sync.enabled ? "Change Setup…" : "Set Up Sync…") { openWindow(id: "sync-setup") }
+                        .buttonStyle(.borderedProminent)
+                }
+                Toggle("Sync across my Macs", isOn: $sync.enabled)
                     .disabled(sync.folderPath.isEmpty)
                 Text("Every Mac with MacTerm+ that uses the same cloud folder stays in sync. Changes merge automatically; nothing is sent anywhere except your own cloud folder.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -390,6 +399,12 @@ private struct SyncSettings: View {
                 }
                 Text("Google Drive: install “Google Drive for desktop” and sign in; it appears here automatically. A “MacTermPlus” folder is created inside the location you pick.")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("What to sync") {
+                Toggle("Sessions", isOn: $sync.syncSessions)
+                Toggle("Settings (theme, fonts, appearance, toolbar, files, status bar)", isOn: $sync.syncSettings)
+                Toggle("Macros & Quick Commands", isOn: $sync.syncMacros)
+                Toggle("Tunnels", isOn: $sync.syncTunnels)
             }
             Section("Passwords") {
                 Toggle("Also sync saved passwords (end-to-end encrypted)", isOn: $sync.syncPasswords)

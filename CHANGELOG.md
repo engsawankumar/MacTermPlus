@@ -3,6 +3,13 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.10
+- **Sync setup assistant** (Sync → Set Up Sync…), in three steps: choose **iCloud Drive or Google Drive**,
+  pick **what to sync** (Sessions, Passwords, Settings, Macros & Quick Commands, Tunnels; all ticked, with
+  Select all), then **allow access** when macOS asks. It ends with a summary and the list of your Macs.
+- **Settings now sync** between Macs: theme, fonts, appearance, toolbar, files and status bar options.
+- Each item can be turned off later in Settings → Sync → What to sync; an item that's off stays on this Mac only.
+
 ## 1.0.9
 - **Quick Commands**: a panel of ready-made server commands, opened with the new **Commands** toolbar button
   or **⇧⌘K** and closed with ✕. More than 50 commands in folders: Common, System & Logs, Apache, LiteSpeed,

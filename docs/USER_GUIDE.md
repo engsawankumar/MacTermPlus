@@ -283,6 +283,10 @@ Checks whether a TCP port on any host can be reached from this Mac, and how fast
 
 ## Sync Across Macs
 
+### Set up
+
+Click **Sync** in the toolbar → **Set Up Sync…** (or Settings → Sync → Set Up Sync…). The assistant has three steps: **1. Where**: choose iCloud Drive or Google Drive (or another cloud folder). **2. What**: Sessions, Passwords, Settings, Macros & Quick Commands and Tunnels are all ticked; untick anything that should stay on this Mac only. Passwords need a sync passphrase, the same on every Mac. **3. Allow**: macOS asks whether MacTerm+ may use that drive; click Allow. MacTerm+ then syncs once and shows which Macs are connected. Run it on each Mac and pick the same drive. The first Mac shares its settings; Macs that join take the shared settings. You can change any choice later in Settings → Sync → What to sync.
+
 ### How it works
 
 MacTerm+ keeps a small file (`MacTermPlus/sync.json`) in a cloud folder you choose. Each Mac reads it, merges it with its own sessions, macros and tunnels, and writes the result back. Changes from different Macs combine; for the same session the newest edit wins, and deletions sync too.
