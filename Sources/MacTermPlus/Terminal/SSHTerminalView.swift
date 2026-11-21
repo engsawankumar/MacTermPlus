@@ -32,6 +32,7 @@ final class SSHTerminalController: NSObject, ObservableObject, TerminalViewDeleg
         contextMenu = TerminalMenu(terminal: terminalView)
         let themeID = connection.profile.themeID
         Appearance.apply(to: terminalView, themeID: themeID)
+        terminalView.backspaceSendsControlH = connection.profile.backspaceCtrlH
         terminalView.terminalDelegate = self
         MultiExec.shared.register(terminalView)
         NotificationCenter.default.addObserver(forName: AppSettings.changed, object: nil, queue: .main) { [weak self] _ in

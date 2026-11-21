@@ -259,6 +259,14 @@ The session must use a private key, or have its password saved in the Keychain, 
 
 ## Macros & Tools
 
+### Host details
+
+Click the ⓘ next to a session in the sidebar (or press **⌘I**) to open **Host Details** on the right. Change the address, name, folder, tags, color, theme, protocol, port and login there; every change is saved as you type. **Show more** has the start folder, the **Backspace** key (Ctrl-H for old systems and network devices), the file browser option and notes. While the panel is open, clicking another session shows that one. **Connect** opens it; the ⋯ menu has Duplicate, Copy SSH Command, Forget Host Key and Delete.
+
+### Tags
+
+Add **tags** such as `production`, `client-a` or `mysql` in Host Details. They show under the session in the sidebar, and the tag button next to the search box filters the list by tag. The search box also finds sessions by username, notes and tags. Tags sync with your sessions.
+
 ### Keychain window
 
 Click **Keychain** in the toolbar (or press **⌥⌘K**). One window holds **Keys**, **Identities**, **Known Hosts** and **Passwords**.

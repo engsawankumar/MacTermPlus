@@ -3,6 +3,14 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.3.0
+- **Host Details panel**: click ⓘ on a session (or ⌘I) to edit it on the right side while you work: address,
+  name, folder, tags, color, theme, protocol, port, login (or identity), password with Touch ID reveal, start folder,
+  Backspace key and notes. Changes save as you type; Connect, Duplicate, Copy SSH Command and Delete are one click away.
+- **Tags** for sessions, shown in the sidebar, with a tag filter next to the search box. Search also finds
+  usernames, notes and tags.
+- **Backspace sends Ctrl-H** option per session, for old systems and network devices.
+
 ## 1.2.0
 - **Keychain window** (toolbar → Keychain, ⌥⌘K): Keys, Identities, Known Hosts and Passwords in one place.
 - **Keys**: your SSH keys with type, passphrase status, fingerprint and usage; create a new ED25519 key,

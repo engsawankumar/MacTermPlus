@@ -90,6 +90,8 @@ struct MacTermPlusApp: App {
                 Button("Quick Commands") { AppSettings.shared.showQuickCommands.toggle() }
                     .keyboardShortcut("k", modifiers: [.command, .shift])
                 KeychainMenuButton()
+                Button("Host Details") { NotificationCenter.default.post(name: .toggleHostDetails, object: nil) }
+                    .keyboardShortcut("i", modifiers: .command)
                 Button("Search Quick Commands") {
                     AppSettings.shared.showQuickCommands = true
                     DispatchQueue.main.async { NotificationCenter.default.post(name: .focusQuickCommandSearch, object: nil) }

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Demo content for README screenshots (MTP_SHOWCASE=1). Uses made-up servers and files and makes
@@ -54,18 +55,22 @@ enum Showcase {
 
     static func sessions() -> [SessionProfile] {
         func p(_ name: String, _ group: String, _ host: String, _ user: String, _ color: SessionColor, _ os: String,
-               kind: SessionKind = .ssh, key: Bool = true) -> SessionProfile {
+               kind: SessionKind = .ssh, key: Bool = true, tags: [String] = []) -> SessionProfile {
             var s = SessionProfile(name: name, group: group, host: host, username: user)
+            // Stable ids, so the same demo session is found again (e.g. by Host Details).
+            let d = Array(SHA256.hash(data: Data(("showcase:" + name).utf8)))
+            s.id = UUID(uuid: (d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]))
+            s.tags = tags
             s.color = color; s.osID = os; s.kind = kind
             if key { s.auth = .privateKey; s.keyPath = "~/.ssh/id_ed25519" }
             if kind.isFTP { s.port = 21; s.auth = .password }
             return s
         }
         return [
-            p("web-01", "Production", "web-01.example.com", "deploy", .red, "ubuntu"),
-            p("web-02", "Production", "web-02.example.com", "deploy", .red, "ubuntu"),
-            p("db-01", "Production", "db-01.example.com", "admin", .orange, "debian"),
-            p("api-staging", "Staging", "staging.example.com", "deploy", .yellow, "rocky"),
+            p("web-01", "Production", "web-01.example.com", "deploy", .red, "ubuntu", tags: ["production", "nginx"]),
+            p("web-02", "Production", "web-02.example.com", "deploy", .red, "ubuntu", tags: ["production", "nginx"]),
+            p("db-01", "Production", "db-01.example.com", "admin", .orange, "debian", tags: ["production", "mysql"]),
+            p("api-staging", "Staging", "staging.example.com", "deploy", .yellow, "rocky", tags: ["staging"]),
             p("ci-runner", "Staging", "ci.example.com", "runner", .blue, "fedora"),
             p("Raspberry Pi", "Home Lab", "pi.local", "pi", .pink, "raspbian"),
             p("NAS", "Home Lab", "nas.local", "admin", .indigo, "truenas"),

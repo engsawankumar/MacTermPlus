@@ -205,6 +205,8 @@ final class Workspace: ObservableObject {
     @Published var split: SplitLayout = .single
     /// Asks the sidebar to show a panel (e.g. the file browser when a session connects).
     @Published var sidebarRequest: SidebarPanel?
+    /// Session shown in the Host Details panel (nil = closed).
+    @Published var inspectedID: UUID?
     @Published private(set) var recentIDs: [UUID] =
         (UserDefaults.standard.stringArray(forKey: "recentSessions") ?? []).compactMap(UUID.init(uuidString:))
 

@@ -33,7 +33,10 @@ struct ContentView: View {
                 }
                 .frame(minWidth: 500)
                 .layoutPriority(1)
-                if settings.showQuickCommands {
+                if let id = workspace.inspectedID {
+                    HostDetailsPanel(sessionID: id, connect: { connect($0) })
+                        .frame(minWidth: 290, idealWidth: 330, maxWidth: 480)
+                } else if settings.showQuickCommands {
                     QuickCommandsPanel()
                         .frame(minWidth: 260, idealWidth: 320, maxWidth: 520)
                 }
@@ -65,6 +68,12 @@ struct ContentView: View {
             connect(target)
         }
         .onReceive(NotificationCenter.default.publisher(for: .newSession)) { _ in editing = SessionProfile() }
+        .onReceive(NotificationCenter.default.publisher(for: .toggleHostDetails)) { _ in
+            withAnimation(.easeOut(duration: 0.15)) {
+                if workspace.inspectedID != nil { workspace.inspectedID = nil }
+                else { workspace.inspectedID = workspace.selected?.profile?.id ?? store.sessions.first?.id }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .importSessions)) { _ in showImport = true }
         .onReceive(NotificationCenter.default.publisher(for: .exportSessions)) { _ in showExport = true }
         .onReceive(NotificationCenter.default.publisher(for: .showHelp)) { _ in openWindow(id: "help") }
@@ -175,7 +184,10 @@ struct MainToolbar: View {
             if settings.quickCommandsButton {
                 ToolButton(icon: "bolt.horizontal.fill", color: .mint, title: "Commands",
                            help: "Quick Commands: ready-made server commands (⇧⌘K)", active: settings.showQuickCommands) {
-                    withAnimation(.easeOut(duration: 0.15)) { settings.showQuickCommands.toggle() }
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        if workspace.inspectedID != nil { workspace.inspectedID = nil; settings.showQuickCommands = true }
+                        else { settings.showQuickCommands.toggle() }
+                    }
                 }
                 .contextMenu {
                     Button(settings.showQuickCommands ? "Close Quick Commands" : "Open Quick Commands") { settings.showQuickCommands.toggle() }
@@ -812,4 +824,5 @@ extension Notification.Name {
     static let showSettings = Notification.Name("MacTermPlus.showSettings")
     static let showSyncSettings = Notification.Name("MacTermPlus.showSyncSettings")
     static let debugOpenWindow = Notification.Name("MacTermPlus.debugOpenWindow")
+    static let toggleHostDetails = Notification.Name("MacTermPlus.toggleHostDetails")
 }

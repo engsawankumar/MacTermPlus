@@ -90,6 +90,10 @@ struct SessionProfile: Codable, Identifiable, Hashable {
     var osID: String = ""
     /// Saved identity (username + password or key) this session uses instead of its own credentials.
     var identityID: UUID?
+    /// Free labels such as "production" or "client-a", for search and filtering.
+    var tags: [String] = []
+    /// Backspace sends Ctrl-H (^H) instead of DEL, for old systems and some network devices.
+    var backspaceCtrlH: Bool = false
     /// Last change, used to merge edits from other devices during sync.
     var updatedAt: Date = Date()
 
@@ -129,6 +133,8 @@ struct SessionProfile: Codable, Identifiable, Hashable {
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? ""
         osID = try c.decodeIfPresent(String.self, forKey: .osID) ?? ""
         identityID = try? c.decodeIfPresent(UUID.self, forKey: .identityID)
+        tags = (try? c.decodeIfPresent([String].self, forKey: .tags)) ?? []
+        backspaceCtrlH = (try? c.decodeIfPresent(Bool.self, forKey: .backspaceCtrlH)) ?? false
     }
 
     /// Same server, regardless of name — used to skip duplicates on import.
@@ -174,6 +180,11 @@ final class SessionStore: ObservableObject {
             if b.isEmpty { return true }
             return a.localizedCaseInsensitiveCompare(b) == .orderedAscending
         }
+    }
+
+    /// Every tag in use, sorted.
+    var allTags: [String] {
+        Array(Set(sessions.flatMap(\.tags))).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     func sessions(in group: String) -> [SessionProfile] {

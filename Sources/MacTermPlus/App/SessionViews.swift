@@ -12,11 +12,16 @@ struct SessionSidebar: View {
     @ViewState private var confirmDelete: SessionProfile?
     @ViewState private var collapsed: Set<String> = []
 
+    @ViewState private var tagFilter: String?
+
     private func filtered(_ list: [SessionProfile]) -> [SessionProfile] {
+        var list = list
+        if let tagFilter { list = list.filter { $0.tags.contains(tagFilter) } }
         guard !search.isEmpty else { return list }
-        return list.filter {
-            $0.displayName.localizedCaseInsensitiveContains(search) || $0.host.localizedCaseInsensitiveContains(search)
-                || $0.group.localizedCaseInsensitiveContains(search)
+        let words = search.lowercased().split(separator: " ").map(String.init)
+        return list.filter { p in
+            let hay = ([p.displayName, p.host, p.group, p.username, p.notes] + p.tags.map { "#" + $0 + " " + $0 }).joined(separator: " ").lowercased()
+            return words.allSatisfy { hay.contains($0) }
         }
     }
 
@@ -55,9 +60,14 @@ struct SessionSidebar: View {
                     )) {
                         ForEach(items) { profile in
                             SessionRow(profile: profile, compact: settings.compactSidebar,
-                                       isOpen: workspace.isOpen(profile))
+                                       isOpen: workspace.isOpen(profile), inspected: workspace.inspectedID == profile.id) {
+                                    withAnimation(.easeOut(duration: 0.15)) {
+                                        workspace.inspectedID = workspace.inspectedID == profile.id ? nil : profile.id
+                                    }
+                                }
                                 .contentShape(Rectangle())
                                 .onTapGesture(count: 2) { connectTarget = profile }
+                                .onTapGesture(count: 1) { if workspace.inspectedID != nil { workspace.inspectedID = profile.id } }
                                 .contextMenu { menu(for: profile) }
                         }
                     } header: {
@@ -72,15 +82,34 @@ struct SessionSidebar: View {
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search sessions", text: $search).textFieldStyle(.plain)
-                if !search.isEmpty {
-                    Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.borderless)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Search sessions, tags, notes", text: $search).textFieldStyle(.plain)
+                    if !search.isEmpty {
+                        Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.borderless)
+                    }
+                    if !store.allTags.isEmpty {
+                        Menu {
+                            Button("All Sessions") { tagFilter = nil }
+                            Divider()
+                            ForEach(store.allTags, id: \.self) { t in
+                                Button { tagFilter = t } label: { Label(t, systemImage: tagFilter == t ? "checkmark" : "tag") }
+                            }
+                        } label: { Image(systemName: tagFilter == nil ? "tag" : "tag.fill") }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .help("Filter by tag")
+                    }
+                }
+                .padding(6)
+                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 7))
+                if let tagFilter {
+                    HStack(spacing: 4) {
+                        Text("Tag:").font(.caption).foregroundStyle(.secondary)
+                        FlowTags(tags: [tagFilter]) { _ in self.tagFilter = nil }
+                    }
                 }
             }
-            .padding(6)
-            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 7))
             .padding(.horizontal, 8).padding(.top, 6)
         }
         .safeAreaInset(edge: .bottom) {
@@ -112,6 +141,7 @@ struct SessionSidebar: View {
     @ViewBuilder
     private func menu(for profile: SessionProfile) -> some View {
         Button("Connect") { connectTarget = profile }
+        Button("Show Details") { workspace.inspectedID = profile.id }
         Button("Edit…") { editing = profile }
         Button("Duplicate") {
             var copy = profile
@@ -187,7 +217,10 @@ private struct SessionRow: View {
     let profile: SessionProfile
     let compact: Bool
     let isOpen: Bool
+    var inspected = false
+    var showDetails: () -> Void = {}
     @ObservedObject var settings = AppSettings.shared
+    @ViewState private var hovering = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -208,14 +241,35 @@ private struct SessionRow: View {
                 Text(profile.displayName).lineLimit(1)
                 if !compact {
                     Text(profile.endpoint).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    if !profile.tags.isEmpty {
+                        HStack(spacing: 3) {
+                            ForEach(profile.tags.prefix(3), id: \.self) { t in
+                                Text(t).font(.system(size: 9, weight: .medium))
+                                    .padding(.horizontal, 5).padding(.vertical, 1)
+                                    .background(Capsule().fill(TagColor.color(t).opacity(0.22)))
+                                    .foregroundStyle(TagColor.color(t))
+                            }
+                            if profile.tags.count > 3 { Text("+\(profile.tags.count - 3)").font(.system(size: 9)).foregroundStyle(.secondary) }
+                        }
+                    }
                 }
             }
             Spacer(minLength: 0)
             if isOpen {
                 Circle().fill(.green).frame(width: 7, height: 7).help("Open in a tab")
             }
+            if hovering || inspected {
+                Button(action: showDetails) {
+                    Image(systemName: inspected ? "info.circle.fill" : "info.circle")
+                        .foregroundStyle(inspected ? Color.accentColor : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Host details (⌘I)")
+            }
         }
         .padding(.vertical, compact ? 0 : 2)
+        .onHover { hovering = $0 }
+        .background(RoundedRectangle(cornerRadius: 6).fill(inspected ? Color.accentColor.opacity(0.12) : .clear).padding(-4))
         .help(profile.notes.isEmpty ? profile.endpoint : "\(profile.endpoint)\n\(profile.notes)")
     }
 }
