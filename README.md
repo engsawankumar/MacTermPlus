@@ -31,7 +31,7 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 
 ## Features
 
-| | |
+| Feature | What you get |
 |---|---|
 | 🖥 **Terminal** | Tabs, split view (2 or 4 terminals), 17 color themes, per-server themes, copy & paste with preview, macros |
 | 📁 **Files** | File browser beside the terminal, two-pane Mac ↔ server view, drag & drop, upload and download whole folders, edit any file in your favorite Mac app |
