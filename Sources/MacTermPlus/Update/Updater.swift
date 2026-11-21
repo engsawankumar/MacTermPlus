@@ -20,10 +20,11 @@ struct ReleaseInfo: Decodable {
     let assets: [Asset]
 
     var version: String { tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV")) }
-    var zipAsset: Asset? { assets.first { $0.name.lowercased().hasSuffix(".zip") && $0.name.lowercased().contains("mactermplus") } }
+    /// The app zip ("MacTerm+-1.0.1.zip"; GitHub may show "+" differently, so match loosely).
+    var zipAsset: Asset? { assets.first { $0.name.lowercased().hasSuffix(".zip") && $0.name.lowercased().contains("macterm") } }
     var checksumAsset: Asset? {
         guard let zip = zipAsset else { return nil }
-        return assets.first { $0.name == zip.name + ".sha256" } ?? assets.first { $0.name.lowercased().hasSuffix(".sha256") }
+        return assets.first { $0.name == zip.name + ".sha256" } ?? assets.first { $0.name.lowercased().hasSuffix(".zip.sha256") }
     }
 }
 
@@ -33,7 +34,7 @@ enum UpdateError: LocalizedError {
         switch self {
         case .notConfigured: return "Updates aren’t set up yet: no GitHub repository is configured for this build."
         case .noRelease: return "No published release was found on GitHub."
-        case .noAsset: return "The latest release has no MacTermPlus .zip attached."
+        case .noAsset: return "The latest release has no MacTerm+ .zip attached."
         case .checksumMismatch: return "The download doesn’t match its published checksum, so it wasn’t installed."
         case .badBundle(let why): return "The downloaded app isn’t valid: \(why)"
         case .notWritable(let url): return "MacTerm+ can’t replace itself in \(url.deletingLastPathComponent().path). The new version was opened in Finder — drag it to Applications."

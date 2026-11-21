@@ -2,19 +2,19 @@ import Foundation
 
 /// Where sessions can be imported from.
 enum ImportSource: String, CaseIterable, Identifiable {
-    case auto, mobaxterm, putty, winscp, filezilla, winbox, termius, applePasswords, sshConfig, macterm
+    case auto, bookmarks, registry, sessionsIni, siteManager, addressBook, csvFile, applePasswords, sshConfig, macterm
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .auto: return "Auto-detect"
-        case .mobaxterm: return "MobaXterm"
-        case .putty: return "PuTTY"
-        case .winscp: return "WinSCP"
-        case .filezilla: return "FileZilla (FTP/SFTP)"
-        case .winbox: return "WinBox"
-        case .termius: return "Termius / CSV"
+        case .bookmarks: return "Session bookmarks (.mxtsessions)"
+        case .registry: return "Registry sessions (.reg)"
+        case .sessionsIni: return "Session list (.ini)"
+        case .siteManager: return "Site manager (.xml)"
+        case .addressBook: return "Router address book (.cdb)"
+        case .csvFile: return "Spreadsheet (CSV)"
         case .applePasswords: return "Passwords app"
         case .sshConfig: return "OpenSSH config"
         case .macterm: return "MacTerm+ export"
@@ -24,12 +24,12 @@ enum ImportSource: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .auto: return "wand.and.stars"
-        case .mobaxterm: return "rectangle.stack.fill"
-        case .putty: return "desktopcomputer"
-        case .winscp: return "arrow.left.arrow.right.square.fill"
-        case .filezilla: return "externaldrive.connected.to.line.below.fill"
-        case .winbox: return "network"
-        case .termius: return "tablecells.fill"
+        case .bookmarks: return "rectangle.stack.fill"
+        case .registry: return "desktopcomputer"
+        case .sessionsIni: return "arrow.left.arrow.right.square.fill"
+        case .siteManager: return "externaldrive.connected.to.line.below.fill"
+        case .addressBook: return "network"
+        case .csvFile: return "tablecells.fill"
         case .applePasswords: return "key.icloud.fill"
         case .sshConfig: return "terminal.fill"
         case .macterm: return "shippingbox.fill"
@@ -39,12 +39,12 @@ enum ImportSource: String, CaseIterable, Identifiable {
     var colorName: String {
         switch self {
         case .auto: return "teal"
-        case .mobaxterm: return "orange"
-        case .putty: return "blue"
-        case .winscp: return "green"
-        case .filezilla: return "red"
-        case .winbox: return "indigo"
-        case .termius: return "purple"
+        case .bookmarks: return "orange"
+        case .registry: return "blue"
+        case .sessionsIni: return "green"
+        case .siteManager: return "red"
+        case .addressBook: return "indigo"
+        case .csvFile: return "purple"
         case .applePasswords: return "gray"
         case .sshConfig: return "gray"
         case .macterm: return "pink"
@@ -55,19 +55,19 @@ enum ImportSource: String, CaseIterable, Identifiable {
     var hint: String {
         switch self {
         case .auto:
-            return "Pick any supported file or folder (including a CrossOver/Wine bottle’s user.reg); the format is detected automatically."
-        case .mobaxterm:
-            return "In MobaXterm: right-click “User sessions” → Export all sessions to file (.mxtsessions). The MobaXterm.ini file also works."
-        case .putty:
-            return "A .reg export (on Windows: reg export HKCU\\Software\\SimonTatham\\PuTTY\\Sessions putty.reg), a CrossOver/Wine bottle’s user.reg, or the ~/.putty/sessions folder."
-        case .winscp:
-            return "In WinSCP: Tools → Export/Backup Configuration (WinSCP.ini), or use the portable WinSCP.ini."
-        case .filezilla:
-            return "In FileZilla: File → Export… (or copy sitemanager.xml from %APPDATA%\\FileZilla). SFTP, FTP and FTPS sites are imported."
-        case .winbox:
-            return "Copy Addresses.cdb from %APPDATA%\\Mikrotik\\Winbox. Addresses are imported as SSH sessions on port 22 (best effort — WinBox’s file format is undocumented)."
-        case .termius:
-            return "A CSV file with a header row, e.g. Label, Group, Hostname, Port, Username. Works for Termius exports, spreadsheets and most other apps."
+            return "Pick any supported file or folder (including a Windows bottle’s user.reg); the format is detected automatically."
+        case .bookmarks:
+            return "A session bookmarks export (.mxtsessions) or the matching .ini settings file from a Windows SSH client."
+        case .registry:
+            return "A Windows registry export (.reg) of saved SSH sessions, a Windows bottle’s user.reg, or a ~/.putty/sessions folder."
+        case .sessionsIni:
+            return "An exported .ini configuration file from a Windows SFTP/FTP client."
+        case .siteManager:
+            return "A site manager XML export (sitemanager.xml) from an FTP/SFTP client. SFTP, FTP and FTPS sites are imported."
+        case .addressBook:
+            return "A router management tool’s address book (Addresses.cdb). Addresses are imported as SSH sessions on port 22 (best effort — the format is undocumented)."
+        case .csvFile:
+            return "A CSV file with a header row, e.g. Label, Group, Hostname, Port, Username. Works with spreadsheets and most apps’ CSV exports."
         case .applePasswords:
             return "A CSV exported from Apple’s Passwords app (iCloud Keychain): Passwords → File → Export All Passwords. Entries whose URL starts with ssh://, sftp://, ftp:// or ftps:// become sessions, with their passwords. Delete the CSV afterwards — it contains passwords in plain text."
         case .sshConfig:
@@ -105,11 +105,11 @@ enum SessionImporter {
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
         if isDir.boolValue {
             // ~/.putty/sessions folder
-            var result = ImportResult(detected: .putty)
+            var result = ImportResult(detected: .registry)
             let files = (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
             for f in files {
                 guard let text = decodeText(try? Data(contentsOf: f)) else { continue }
-                if let p = puttyUnixSession(name: f.lastPathComponent, text: text) { result.sessions.append(p) }
+                if let p = unixSessionFile(name: f.lastPathComponent, text: text) { result.sessions.append(p) }
             }
             guard !result.sessions.isEmpty else { throw ImportError.nothingFound }
             return result
@@ -121,21 +121,21 @@ enum SessionImporter {
 
         var result: ImportResult
         switch resolved {
-        case .winbox:
-            result = winbox(data)
-        case .filezilla:
-            result = filezilla(data)
+        case .addressBook:
+            result = addressBook(data)
+        case .siteManager:
+            result = siteManager(data)
         case .macterm:
             result = try json(data)
         default:
             guard let text = decodeText(data) else { throw ImportError.unreadable }
             switch resolved {
-            case .mobaxterm: result = mobaxterm(text)
-            case .putty:
+            case .bookmarks: result = bookmarksIni(text)
+            case .registry:
                 result = text.contains("SimonTatham") || text.contains("Martin Prikryl") ? registry(text)
-                    : ImportResult(sessions: [puttyUnixSession(name: url.lastPathComponent, text: text)].compactMap { $0 })
-            case .winscp: result = winscp(text)
-            case .termius: result = csv(text)
+                    : ImportResult(sessions: [unixSessionFile(name: url.lastPathComponent, text: text)].compactMap { $0 })
+            case .sessionsIni: result = sessionsIni(text)
+            case .csvFile: result = csv(text)
             case .applePasswords: result = applePasswords(text)
             case .sshConfig: result = sshConfig(text)
             default: throw ImportError.unknownFormat
@@ -154,25 +154,25 @@ enum SessionImporter {
     static func detect(url: URL, data: Data) -> ImportSource? {
         let ext = url.pathExtension.lowercased()
         let name = url.lastPathComponent.lowercased()
-        if ext == "cdb" || data.starts(with: [0x0D, 0xF0, 0x1D, 0xC0]) { return .winbox }
-        if ext == "mxtsessions" || name == "mobaxterm.ini" { return .mobaxterm }
+        if ext == "cdb" || data.starts(with: [0x0D, 0xF0, 0x1D, 0xC0]) { return .addressBook }
+        if ext == "mxtsessions" || name == "mobaxterm.ini" { return .bookmarks }
         if ext == "csv" {
             if let head = decodeText(data)?.split(separator: "\n").first?.lowercased(),
                head.contains("title"), head.contains("url"), head.contains("password") { return .applePasswords }
-            return .termius
+            return .csvFile
         }
         if ext == "json" { return .macterm }
         guard let text = decodeText(data) else { return nil }
-        if text.contains("<FileZilla3") || text.contains("<Servers>") { return .filezilla }
-        if text.contains("SimonTatham\\PuTTY") || text.contains("SimonTatham\\\\PuTTY") || text.contains("Martin Prikryl") { return .putty }
-        if text.contains("[Sessions\\") { return .winscp }
-        if text.contains("[Bookmarks") { return .mobaxterm }
+        if text.contains("<FileZilla3") || text.contains("<Servers>") { return .siteManager }
+        if text.contains("SimonTatham\\PuTTY") || text.contains("SimonTatham\\\\PuTTY") || text.contains("Martin Prikryl") { return .registry }
+        if text.contains("[Sessions\\") { return .sessionsIni }
+        if text.contains("[Bookmarks") { return .bookmarks }
         if text.range(of: #"(?im)^\s*host\s+\S+"#, options: .regularExpression) != nil,
            text.range(of: #"(?im)^\s*hostname\s+\S+"#, options: .regularExpression) != nil { return .sshConfig }
         if name == "config" { return .sshConfig }
         if text.trimmingCharacters(in: .whitespaces).hasPrefix("{") || text.hasPrefix("[") { return .macterm }
-        if text.contains("HostName=") && text.contains("Protocol=") { return .putty }
-        if let first = text.split(separator: "\n").first, first.contains(","), first.lowercased().contains("host") { return .termius }
+        if text.contains("HostName=") && text.contains("Protocol=") { return .registry }
+        if let first = text.split(separator: "\n").first, first.contains(","), first.lowercased().contains("host") { return .csvFile }
         return nil
     }
 
@@ -224,9 +224,9 @@ enum SessionImporter {
         return out
     }
 
-    // MARK: MobaXterm (.mxtsessions / MobaXterm.ini)
+    // MARK: Session bookmarks (.mxtsessions / .ini)
 
-    static func mobaxterm(_ text: String) -> ImportResult {
+    static func bookmarksIni(_ text: String) -> ImportResult {
         var result = ImportResult()
         let sections = iniSections(text)
         // Sessions may reference a stored credential as "[Name]"; its value is "username:encrypted-password".
@@ -262,11 +262,11 @@ enum SessionImporter {
         return result
     }
 
-    // MARK: PuTTY
+    // MARK: Registry sessions
 
-    /// Windows registry text: a .reg export, or a Wine/CrossOver/Whisky user.reg. Reads PuTTY and WinSCP sessions.
+    /// Windows registry text: a .reg export, or a Windows bottle’s user.reg. Reads saved SSH/SFTP session keys.
     static func registry(_ text: String) -> ImportResult {
-        var result = puttyReg(text)
+        var result = registrySessions(text)
         for section in iniSections(text) {
             guard let r = section.name.range(of: "Martin Prikryl\\WinSCP 2\\Sessions\\") else { continue }
             let full = String(section.name[r.upperBound...]).removingPercentEncoding ?? ""
@@ -281,10 +281,10 @@ enum SessionImporter {
             }
             let pieces = full.split(separator: "/").map(String.init)
             let proto = dword("FSProtocol") ?? 2
-            guard let kind = winscpKind(proto, ftps: dword("Ftps") ?? 0) else {
+            guard let kind = iniKind(proto, ftps: dword("Ftps") ?? 0) else {
                 result.skipped.append("\(pieces.last ?? full) (\(proto == 6 ? "WebDAV" : proto == 7 ? "S3" : "other"))"); continue
             }
-            if let p = make(name: pieces.last ?? full, group: pieces.count > 1 ? pieces.dropLast().joined(separator: "/") : "WinSCP",
+            if let p = make(name: pieces.last ?? full, group: pieces.count > 1 ? pieces.dropLast().joined(separator: "/") : "Imported",
                             host: str("HostName"), port: dword("PortNumber") ?? kind.defaultPort, user: str("UserName"), kind: kind) {
                 result.sessions.append(p)
             }
@@ -292,7 +292,7 @@ enum SessionImporter {
         return result
     }
 
-    static func puttyReg(_ text: String) -> ImportResult {
+    static func registrySessions(_ text: String) -> ImportResult {
         var result = ImportResult()
         for section in iniSections(text) {
             guard section.name.contains("SimonTatham\\PuTTY"), let r = section.name.range(of: "\\Sessions\\") else { continue }
@@ -308,14 +308,14 @@ enum SessionImporter {
             }
             let proto = str("Protocol")
             if !proto.isEmpty && proto != "ssh" { result.skipped.append("\(name) (\(proto))"); continue }
-            if let p = make(name: name, group: "PuTTY", host: str("HostName"), port: dword("PortNumber") ?? 22, user: str("UserName")) {
+            if let p = make(name: name, group: "Imported", host: str("HostName"), port: dword("PortNumber") ?? 22, user: str("UserName")) {
                 result.sessions.append(p)
             }
         }
         return result
     }
 
-    static func puttyUnixSession(name: String, text: String) -> SessionProfile? {
+    static func unixSessionFile(name: String, text: String) -> SessionProfile? {
         var v: [String: String] = [:]
         for line in text.components(separatedBy: .newlines) {
             if let eq = line.firstIndex(of: "=") { v[String(line[..<eq])] = String(line[line.index(after: eq)...]) }
@@ -324,13 +324,13 @@ enum SessionImporter {
         guard proto == "ssh" else { return nil }
         let decoded = name.removingPercentEncoding ?? name
         guard decoded != "Default Settings" else { return nil }
-        return make(name: decoded, group: "PuTTY", host: v["HostName"] ?? "", port: Int(v["PortNumber"] ?? "") ?? 22,
+        return make(name: decoded, group: "Imported", host: v["HostName"] ?? "", port: Int(v["PortNumber"] ?? "") ?? 22,
                     user: v["UserName"] ?? "", keyPath: v["PublicKeyFile"] ?? "")
     }
 
-    // MARK: WinSCP (WinSCP.ini)
+    // MARK: Session list (.ini)
 
-    static func winscp(_ text: String) -> ImportResult {
+    static func sessionsIni(_ text: String) -> ImportResult {
         var result = ImportResult()
         for section in iniSections(text) where section.name.hasPrefix("Sessions\\") {
             let full = String(section.name.dropFirst("Sessions\\".count)).removingPercentEncoding ?? ""
@@ -339,12 +339,12 @@ enum SessionImporter {
             let name = pieces.last ?? full
             let group = pieces.dropLast().joined(separator: "/")
             let proto = Int(section.values["FSProtocol"] ?? "2") ?? 2
-            guard let kind = winscpKind(proto, ftps: Int(section.values["Ftps"] ?? "0") ?? 0) else {
+            guard let kind = iniKind(proto, ftps: Int(section.values["Ftps"] ?? "0") ?? 0) else {
                 result.skipped.append("\(name) (\(proto == 6 ? "WebDAV" : proto == 7 ? "S3" : "unsupported"))")
                 continue
             }
             let key = (section.values["PublicKeyFile"] ?? "").removingPercentEncoding ?? ""
-            if let p = make(name: name, group: group.isEmpty ? "WinSCP" : group, host: section.values["HostName"] ?? "",
+            if let p = make(name: name, group: group.isEmpty ? "Imported" : group, host: section.values["HostName"] ?? "",
                             port: Int(section.values["PortNumber"] ?? "") ?? kind.defaultPort, user: section.values["UserName"] ?? "",
                             keyPath: key.hasPrefix("/") || key.hasPrefix("~") ? key : "", kind: kind) {
                 result.sessions.append(p)
@@ -353,8 +353,8 @@ enum SessionImporter {
         return result
     }
 
-    /// WinSCP FSProtocol: 0 SCP, 1 SFTP→SCP, 2 SFTP, 5 FTP (Ftps: 0 none, 1 implicit, 2/3 explicit).
-    private static func winscpKind(_ proto: Int, ftps: Int) -> SessionKind? {
+    /// FSProtocol values: 0 SCP, 1 SFTP→SCP, 2 SFTP, 5 FTP (Ftps: 0 none, 1 implicit, 2/3 explicit).
+    private static func iniKind(_ proto: Int, ftps: Int) -> SessionKind? {
         switch proto {
         case 0, 1, 2: return .sftp
         case 5: return ftps == 0 ? .ftp : .ftps
@@ -362,10 +362,10 @@ enum SessionImporter {
         }
     }
 
-    // MARK: FileZilla (sitemanager.xml / export)
+    // MARK: Site manager XML (sitemanager.xml)
 
-    static func filezilla(_ data: Data) -> ImportResult {
-        let delegate = FileZillaParser()
+    static func siteManager(_ data: Data) -> ImportResult {
+        let delegate = SiteManagerParser()
         let parser = XMLParser(data: data)
         parser.delegate = delegate
         parser.parse()
@@ -384,7 +384,7 @@ enum SessionImporter {
                 continue
             }
             let key = s["Keyfile"] ?? ""
-            if let p = make(name: name, group: s["_folder"] ?? "FileZilla", host: s["Host"] ?? "",
+            if let p = make(name: name, group: s["_folder"] ?? "Imported", host: s["Host"] ?? "",
                             port: Int(s["Port"] ?? "") ?? kind.defaultPort, user: s["User"] ?? "",
                             keyPath: key.hasPrefix("/") ? key : "", kind: kind) {
                 result.sessions.append(p)
@@ -393,7 +393,7 @@ enum SessionImporter {
         return result
     }
 
-    private final class FileZillaParser: NSObject, XMLParserDelegate {
+    private final class SiteManagerParser: NSObject, XMLParserDelegate {
         var servers: [[String: String]] = []
         private var stack: [String] = []
         private var folders: [String] = []
@@ -428,11 +428,11 @@ enum SessionImporter {
         }
     }
 
-    // MARK: WinBox (Addresses.cdb) — best effort
+    // MARK: Router address book (Addresses.cdb) — best effort
 
     /// The file is a sequence of records with length-prefixed key/value strings. We scan for the
     /// known keys and read the length-prefixed value that follows each one.
-    static func winbox(_ data: Data) -> ImportResult {
+    static func addressBook(_ data: Data) -> ImportResult {
         let bytes = [UInt8](data)
         var records: [[String: String]] = []
         var current: [String: String] = [:]
@@ -481,10 +481,10 @@ enum SessionImporter {
         var result = ImportResult()
         for r in records {
             var host = r["host"] ?? ""
-            // WinBox addresses may carry the WinBox port (8291); SSH uses 22.
+            // Addresses may carry the management port (8291); SSH uses 22.
             if let colon = host.lastIndex(of: ":"), !host.contains("::") { host = String(host[..<colon]) }
             let label = (r["note"]?.isEmpty == false ? r["note"]! : host)
-            if let p = make(name: label, group: r["group"]?.isEmpty == false ? r["group"]! : "WinBox",
+            if let p = make(name: label, group: r["group"]?.isEmpty == false ? r["group"]! : "Imported",
                             host: host, port: 22, user: r["login"] ?? "admin") {
                 result.sessions.append(p)
             }
@@ -492,7 +492,7 @@ enum SessionImporter {
         return result
     }
 
-    // MARK: CSV (Termius, spreadsheets)
+    // MARK: CSV (spreadsheets, other apps)
 
     static func csv(_ text: String) -> ImportResult {
         var rows = parseCSV(text)
@@ -667,8 +667,8 @@ enum ExportFormat: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .json: return "MacTerm+ (.json) — full, re-importable"
-        case .sshConfig: return "OpenSSH config — for ssh, Termius, VS Code"
-        case .csv: return "CSV — spreadsheets, Termius"
+        case .sshConfig: return "OpenSSH config — for ssh and other SSH tools"
+        case .csv: return "CSV — spreadsheets and other apps"
         case .applePasswords: return "Passwords app (iCloud Keychain) — includes passwords"
         }
     }

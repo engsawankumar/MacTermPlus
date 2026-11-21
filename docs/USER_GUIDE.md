@@ -43,7 +43,7 @@ Double-click the session in the sidebar, or right-click it → **Connect**. A gr
 
 ### Already using another app?
 
-Press **⇧⌘I** to import sessions from MobaXterm, PuTTY, WinSCP, FileZilla, WinBox, Termius (CSV) or your ~/.ssh/config. See **Import & Export**.
+Press **⇧⌘I** to import sessions from other SSH, SFTP and FTP apps, a spreadsheet (CSV) or your ~/.ssh/config. See **Import & Export**.
 
 ## Sessions
 
@@ -109,11 +109,11 @@ Drag files or folders from Finder onto the server pane to upload them. Folders a
 
 ### Edit remote files
 
-Double-click a remote file to open it in your default Mac app (TextEdit, VS Code, BBEdit…). Each time you save, MacTerm+ uploads the change automatically while the tab stays open.
+Double-click a remote file to open it in your default Mac app (TextEdit or any code editor). Each time you save, MacTerm+ uploads the change automatically while the tab stays open.
 
 ### Open With
 
-Right-click any file → **Open With** to choose the app: the default app is listed first, then other apps for that file type, installed code editors (VS Code, Sublime Text, BBEdit, Zed…) and **Other…**. For server files, MacTerm+ downloads a copy, opens it in that app, and uploads every save back.
+Right-click any file → **Open With** to choose the app: the default app is listed first, then other apps for that file type, installed code editors and **Other…**. For server files, MacTerm+ downloads a copy, opens it in that app, and uploads every save back.
 
 ### File toolbar
 
@@ -153,39 +153,25 @@ On macOS, BSD or routers, fewer items are available. Items that can't be read ar
 
 ### Import (automatic)
 
-**File → Import Sessions…** (⇧⌘I) scans this Mac for SSH apps and lists what it finds, with the number of sessions in each. This includes Windows apps running in **CrossOver**, **Wine** or **Whisky** bottles (MobaXterm, PuTTY, WinSCP, FileZilla, WinBox), plus FileZilla, Cyberduck and `~/.ssh/config` on the Mac itself. Tick the apps you want, click **Continue**, review the sessions (ones you already have are unticked) and click **Import**. Passwords are never copied; you'll be asked once when connecting.
+**File → Import Sessions…** (⇧⌘I) scans this Mac for saved sessions and lists what it finds, with the number of sessions in each: SSH/SFTP/FTP apps on the Mac, Windows apps running in compatibility bottles, server logins in the Keychain, and `~/.ssh/config`. Tick what you want, click **Continue**, review the sessions (ones you already have are unticked) and click **Import**. Passwords are never copied; you'll be asked once when connecting.
 
 ### Import from a file (Advanced)
 
-If your sessions are somewhere else, for example a file copied from a Windows PC, click **Import from a File… (Advanced)**, pick the app type (or Auto-detect) and choose the file or folder.
+If your sessions are somewhere else, for example a file copied from a Windows PC, click **Import from a File… (Advanced)**, pick the format (or Auto-detect) and choose the file or folder.
 
-### MobaXterm
+### Supported formats
 
-Found automatically in CrossOver/Wine bottles (`MobaXterm.ini`). From a Windows PC: right-click **User sessions** → **Export all sessions to file** (.mxtsessions). Usernames stored as MobaXterm credentials (shown as `[name]`) are resolved; passwords are not. SSH and SFTP sessions are imported; RDP/VNC/Telnet are listed as skipped.
+• **Session bookmarks** (`.mxtsessions` or the matching `.ini`): SSH, SFTP and FTP entries; usernames stored as saved credentials are resolved (passwords are not).
+• **Registry sessions** (`.reg` export, or a bottle's `user.reg`): saved SSH and SFTP sessions.
+• **Session list** (`.ini`): SFTP, SCP, FTP and FTPS sites, with folders kept.
+• **Site manager** (`sitemanager.xml`): SFTP, FTP and FTPS sites.
+• **Router address book** (`Addresses.cdb`): imported as SSH sessions on port 22, best effort.
+• **Spreadsheet (CSV)** with a header row such as `Label,Group,Hostname,Port,Username`.
+• **Passwords app** export (CSV) and **MacTerm+** JSON exports.
 
-### PuTTY
+### Apps with encrypted storage
 
-Found automatically in CrossOver/Wine bottles (from the bottle's registry, `user.reg`) and in `~/.putty/sessions`. From a Windows PC, in Command Prompt: `reg export HKCU\Software\SimonTatham\PuTTY\Sessions putty.reg`, then import `putty.reg`.
-
-### WinSCP
-
-**Tools → Export/Backup Configuration** produces `WinSCP.ini`. SFTP/SCP sites are imported, with folders kept.
-
-### FileZilla
-
-**File → Export…**, or copy `sitemanager.xml` from `%APPDATA%\FileZilla`. SFTP sites are imported. Plain FTP sites are listed but skipped because MacTerm+ doesn't support FTP yet.
-
-### WinBox
-
-Copy `Addresses.cdb` from `%APPDATA%\Mikrotik\Winbox`. Routers are imported as SSH sessions on port 22, so enable SSH on the router (`/ip service enable ssh`). WinBox's file format isn't documented, so this import is best effort.
-
-### Termius & others
-
-Termius keeps hosts in an encrypted vault, so MacTerm+ can only detect that it's installed. Export your hosts from Termius (or any app/spreadsheet) as CSV with a header row such as `Label,Group,Hostname,Port,Username`, then use **Import from a File**.
-
-### Cyberduck / Mountain Duck
-
-SFTP bookmarks are found automatically. FTP, S3 and WebDAV bookmarks are listed as skipped.
+Some apps keep their hosts in an encrypted vault that other apps can't read. MacTerm+ shows that the app was found; export your hosts from it as CSV or SSH config, then use **Import from a File**.
 
 ### OpenSSH config
 
@@ -323,7 +309,7 @@ On another Mac: in **Passwords**, **File → Export All Passwords…**; then in 
 
 ### Servers saved by other apps
 
-Import also lists SSH/SFTP/FTP logins that Finder, Transmit, Cyberduck and other apps saved in your keychain (including iCloud Keychain items). With **Copy their passwords** ticked, macOS asks you to allow each one.
+Import also lists SSH/SFTP/FTP logins that Finder and other apps saved in your keychain (including iCloud Keychain items). With **Copy their passwords** ticked, macOS asks you to allow each one.
 
 ### Direct iCloud Keychain storage
 
@@ -412,7 +398,7 @@ If you reinstalled the server, right-click the session → **Forget Host Key**. 
 
 ### Unsupported key
 
-Older PuTTY `.ppk` keys must be converted: `puttygen key.ppk -O private-openssh -o id_rsa`.
+Keys in the older `.ppk` format must first be converted to OpenSSH format (most key tools have an “Export OpenSSH key” option).
 
 ### Server info bar is empty
 

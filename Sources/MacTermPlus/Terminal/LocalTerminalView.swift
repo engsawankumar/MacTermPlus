@@ -2,7 +2,7 @@ import AppKit
 import SwiftTerm
 import SwiftUI
 
-/// A local shell tab (your Mac's own zsh), like MobaXterm's local terminal.
+/// A local shell tab (your Mac's own zsh).
 @MainActor
 final class LocalTerminalController: NSObject, LocalProcessTerminalViewDelegate {
     let terminalView: LocalProcessTerminalView

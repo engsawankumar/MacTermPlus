@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Import sessions. By default it scans this Mac (and CrossOver/Wine/Whisky bottles) for installed
+/// Import sessions. By default it scans this Mac (and Windows compatibility bottles) for installed
 /// SSH clients; importing from a chosen file is the Advanced fallback.
 struct ImportSessionsView: View {
     @EnvironmentObject var store: SessionStore
@@ -59,9 +59,9 @@ struct ImportSessionsView: View {
     private var scanning: some View {
         VStack(spacing: 14) {
             ProgressView().controlSize(.large)
-            Text("Looking for MobaXterm, PuTTY, WinSCP, FileZilla, WinBox, Cyberduck, Termius, the Keychain and ~/.ssh/config…")
+            Text("Looking for saved sessions from SSH, SFTP and FTP apps, the Keychain and ~/.ssh/config…")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Text("Includes Windows apps in CrossOver, Wine and Whisky bottles.").font(.caption).foregroundStyle(.tertiary)
+            Text("Includes Windows apps running in compatibility bottles.").font(.caption).foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(30)
@@ -198,7 +198,7 @@ struct ImportSessionsView: View {
     private func pickFile() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
-        panel.canChooseDirectories = fileSource == .putty || fileSource == .auto
+        panel.canChooseDirectories = fileSource == .registry || fileSource == .auto
         panel.showsHiddenFiles = true
         panel.message = fileSource.hint
         panel.prompt = "Import"

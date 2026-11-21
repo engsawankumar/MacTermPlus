@@ -3,6 +3,13 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.1
+- First stable release of **MacTerm+**.
+- New **DMG installer**: open it and drag MacTerm+ to Applications.
+- Release files are now named **MacTerm+** (`MacTerm+-1.0.1.dmg` / `.zip`).
+- Clearer, neutral wording for importing sessions from other apps (by file type).
+- Fixed building on GitHub's Mac builders.
+
 ## 0.5.0
 - File toolbar: up, home, refresh, upload, download, new folder, new file, rename, delete, info, permissions, edit, hidden files, filter, copy path.
 - Permission manager (chmod) with owner/group/others checkboxes, octal field, presets and recursive apply, for SFTP, FTP and local files.
@@ -19,4 +26,4 @@ release description that users see in **Check for Updates**.
 - Per-session terminal themes and colored tabs; Keychain tab (Passwords app export/import, keychain server import).
 
 ## 0.3.0
-- FTP/FTPS/SFTP sessions, MobaXterm-style layout, tunnels, MultiExec, split view, macros, tools, multi-Mac sync.
+- FTP/FTPS/SFTP sessions, all-in-one layout, tunnels, MultiExec, split view, macros, tools, multi-Mac sync.

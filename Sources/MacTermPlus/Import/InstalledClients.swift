@@ -17,7 +17,7 @@ struct DiscoveredSource: Identifiable {
 }
 
 /// Looks for SSH/SFTP clients installed on this Mac — natively, or Windows apps running in
-/// CrossOver, Wine or Whisky — and reads their saved sessions. Read-only: nothing is changed.
+/// Windows compatibility bottles — and reads their saved sessions. Read-only: nothing is changed.
 enum InstalledClientScanner {
     static func scan() -> [DiscoveredSource] {
         var found: [DiscoveredSource] = []
@@ -36,16 +36,16 @@ enum InstalledClientScanner {
         if let t = text(sshConfig) {
             add("OpenSSH", "terminal.fill", "gray", "~/.ssh/config", sshConfig, SessionImporter.sshConfig(t))
         }
-        let puttyDir = home.appendingPathComponent(".putty/sessions")
-        if let files = try? fm.contentsOfDirectory(at: puttyDir, includingPropertiesForKeys: nil) {
-            var r = ImportResult(detected: .putty)
-            for f in files { if let t = text(f), let p = SessionImporter.puttyUnixSession(name: f.lastPathComponent, text: t) { r.sessions.append(p) } }
-            add("PuTTY", "desktopcomputer", "blue", "~/.putty/sessions", puttyDir, r)
+        let sessionsDir = home.appendingPathComponent(".putty/sessions")
+        if let files = try? fm.contentsOfDirectory(at: sessionsDir, includingPropertiesForKeys: nil) {
+            var r = ImportResult(detected: .registry)
+            for f in files { if let t = text(f), let p = SessionImporter.unixSessionFile(name: f.lastPathComponent, text: t) { r.sessions.append(p) } }
+            add("Saved SSH sessions", "desktopcomputer", "blue", "~/.putty/sessions", sessionsDir, r)
         }
         for path in [".config/filezilla/sitemanager.xml", "Library/Application Support/FileZilla/sitemanager.xml"] {
             let url = home.appendingPathComponent(path)
             if let data = try? Data(contentsOf: url) {
-                add("FileZilla", "externaldrive.connected.to.line.below.fill", "red", "~/" + path, url, SessionImporter.filezilla(data))
+                add("FTP/SFTP site list", "externaldrive.connected.to.line.below.fill", "red", "~/" + path, url, SessionImporter.siteManager(data))
                 break
             }
         }
@@ -53,19 +53,19 @@ enum InstalledClientScanner {
                     "Library/Application Support/Cyberduck/Bookmarks"] {
             let url = home.appendingPathComponent(dir)
             if fm.fileExists(atPath: url.path) {
-                add("Cyberduck / Mountain Duck", "externaldrive.badge.icloud", "yellow", "~/" + dir, url, cyberduck(url))
+                add("File transfer bookmarks", "externaldrive.badge.icloud", "yellow", "~/" + dir, url, bookmarkPlists(url))
                 break
             }
         }
-        if NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.termius-dmg.mac") != nil
+        if NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.csvFile-dmg.mac") != nil
             || fm.fileExists(atPath: "/Applications/Termius.app") {
             found.append(DiscoveredSource(
-                app: "Termius", icon: "tablecells.fill", colorName: "purple", location: "/Applications/Termius.app",
+                app: "Encrypted host vault", icon: "tablecells.fill", colorName: "purple", location: "/Applications/Termius.app",
                 url: URL(fileURLWithPath: "/Applications/Termius.app"), result: ImportResult(),
-                note: "Termius keeps hosts in its own encrypted vault. Export them from Termius to a CSV or SSH config file, then use “Import from a file”."))
+                note: "This app keeps its hosts in an encrypted vault that other apps can’t read. Export them from the app to a CSV or SSH config file, then use “Import from a file”."))
         }
 
-        // MARK: macOS Keychain (servers saved by Finder, Transmit, Cyberduck, FileZilla…)
+        // MARK: macOS Keychain (server logins saved by Finder and other apps)
 
         let entries = Keychain.serverEntries()
         if !entries.isEmpty {
@@ -89,7 +89,7 @@ enum InstalledClientScanner {
                                           url: URL(fileURLWithPath: "/"), result: ImportResult(sessions: list)))
         }
 
-        // MARK: Windows apps in CrossOver / Wine / Whisky
+        // MARK: Windows apps in compatibility bottles
 
         for prefix in windowsPrefixes() {
             scanWindowsPrefix(prefix.url, label: prefix.label, into: &found)
@@ -104,8 +104,8 @@ enum InstalledClientScanner {
         let home = NSHomeDirectory()
         var out: [Prefix] = []
         let bottleRoots: [(String, String)] = [
-            ("\(home)/Library/Application Support/CrossOver/Bottles", "CrossOver"),
-            ("\(home)/Library/Containers/com.isaacmarovitz.Whisky/Bottles", "Whisky"),
+            ("\(home)/Library/Application Support/CrossOver/Bottles", "Windows"),
+            ("\(home)/Library/Containers/com.isaacmarovitz.Whisky/Bottles", "Windows"),
         ]
         for (root, product) in bottleRoots {
             for name in (try? fm.contentsOfDirectory(atPath: root)) ?? [] where !name.hasPrefix(".") {
@@ -117,7 +117,7 @@ enum InstalledClientScanner {
         }
         let wine = URL(fileURLWithPath: "\(home)/.wine")
         if fm.fileExists(atPath: wine.appendingPathComponent("drive_c").path) {
-            out.append(Prefix(url: wine, label: "Wine (~/.wine)"))
+            out.append(Prefix(url: wine, label: "Windows prefix (~/.wine)"))
         }
         return out
     }
@@ -125,12 +125,11 @@ enum InstalledClientScanner {
     private static func scanWindowsPrefix(_ prefix: URL, label: String, into found: inout [DiscoveredSource]) {
         let fm = FileManager.default
 
-        // Registry: PuTTY + WinSCP sessions live in user.reg.
+        // Registry: some Windows SSH/SFTP clients keep sessions in user.reg.
         let reg = prefix.appendingPathComponent("user.reg")
         if let t = SessionImporter.decodeText(try? Data(contentsOf: reg)), t.contains("SimonTatham") || t.contains("Martin Prikryl") {
             let r = SessionImporter.registry(t)
-            let puttyCount = r.sessions.filter { $0.group == "PuTTY" }.count
-            let app = puttyCount == r.sessions.count ? "PuTTY" : (puttyCount == 0 ? "WinSCP" : "PuTTY + WinSCP")
+                        let app = "Saved sessions (registry)"
             if !r.sessions.isEmpty || !r.skipped.isEmpty {
                 found.append(DiscoveredSource(app: app, icon: "desktopcomputer", colorName: "blue", location: label + " · registry",
                                               url: reg, result: r))
@@ -153,38 +152,38 @@ enum InstalledClientScanner {
             guard seen.insert(url.resolvingSymlinksInPath().path).inserted else { continue }
             if lower == "mobaxterm.ini" || lower.hasSuffix(".mxtsessions") {
                 if let t = SessionImporter.decodeText(try? Data(contentsOf: url)) {
-                    let r = SessionImporter.mobaxterm(t)
+                    let r = SessionImporter.bookmarksIni(t)
                     if !r.sessions.isEmpty || !r.skipped.isEmpty {
-                        found.append(DiscoveredSource(app: "MobaXterm", icon: "rectangle.stack.fill", colorName: "orange",
+                        found.append(DiscoveredSource(app: "Session bookmarks", icon: "rectangle.stack.fill", colorName: "orange",
                                                       location: shown, url: url, result: r))
                     }
                 }
             } else if lower == "winscp.ini" {
                 if let t = SessionImporter.decodeText(try? Data(contentsOf: url)) {
-                    let r = SessionImporter.winscp(t)
+                    let r = SessionImporter.sessionsIni(t)
                     if !r.sessions.isEmpty || !r.skipped.isEmpty {
-                        found.append(DiscoveredSource(app: "WinSCP", icon: "arrow.left.arrow.right.square.fill", colorName: "green",
+                        found.append(DiscoveredSource(app: "Session list", icon: "arrow.left.arrow.right.square.fill", colorName: "green",
                                                       location: shown, url: url, result: r))
                     }
                 }
             } else if lower == "sitemanager.xml", let data = try? Data(contentsOf: url) {
-                let r = SessionImporter.filezilla(data)
+                let r = SessionImporter.siteManager(data)
                 if !r.sessions.isEmpty || !r.skipped.isEmpty {
-                    found.append(DiscoveredSource(app: "FileZilla", icon: "externaldrive.connected.to.line.below.fill", colorName: "red",
+                    found.append(DiscoveredSource(app: "FTP/SFTP site list", icon: "externaldrive.connected.to.line.below.fill", colorName: "red",
                                                   location: shown, url: url, result: r))
                 }
             } else if lower == "addresses.cdb", let data = try? Data(contentsOf: url) {
-                let r = SessionImporter.winbox(data)
+                let r = SessionImporter.addressBook(data)
                 if !r.sessions.isEmpty {
-                    found.append(DiscoveredSource(app: "WinBox", icon: "network", colorName: "indigo",
+                    found.append(DiscoveredSource(app: "Router address book", icon: "network", colorName: "indigo",
                                                   location: shown, url: url, result: r))
                 }
             }
         }
     }
 
-    /// Cyberduck / Mountain Duck bookmarks: one plist per bookmark.
-    static func cyberduck(_ dir: URL) -> ImportResult {
+    /// File-transfer bookmarks stored as one plist per bookmark (.duck).
+    static func bookmarkPlists(_ dir: URL) -> ImportResult {
         var r = ImportResult()
         let files = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
         for f in files where f.pathExtension == "duck" {
@@ -199,7 +198,7 @@ enum InstalledClientScanner {
             case "ftps": kind = .ftps
             default: r.skipped.append("\(name) (\(proto.uppercased()))"); continue
             }
-            var p = SessionProfile(name: name, group: "Cyberduck", host: plist["Hostname"] as? String ?? "",
+            var p = SessionProfile(name: name, group: "Imported", host: plist["Hostname"] as? String ?? "",
                                    port: Int(plist["Port"] as? String ?? "") ?? kind.defaultPort, username: plist["Username"] as? String ?? "")
             p.kind = kind
             if let path = plist["Path"] as? String { p.initialRemotePath = path }

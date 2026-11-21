@@ -696,7 +696,7 @@ struct WelcomeView: View {
                     ActionCard(icon: "terminal.fill", color: .gray, title: "Local Shell",
                                subtitle: "Terminal on this Mac", shortcut: "⌘T") { workspace.openLocal() }
                     ActionCard(icon: "square.and.arrow.down.fill", color: .orange, title: "Import",
-                               subtitle: "MobaXterm, PuTTY…", shortcut: "⇧⌘I", action: importSessions)
+                               subtitle: "From other apps", shortcut: "⇧⌘I", action: importSessions)
                     ActionCard(icon: "questionmark.circle.fill", color: .purple, title: "Help",
                                subtitle: "Guide & shortcuts", shortcut: "⌘?") { openWindow(id: "help") }
                 }

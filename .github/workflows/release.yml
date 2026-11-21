@@ -14,6 +14,12 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Use the newest Xcode (SwiftTerm needs Swift 6.2+)
+        run: |
+          X=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+          swift --version
       - name: Check version matches tag
         run: |
           test "v$(cat VERSION)" = "${GITHUB_REF_NAME}" || { echo "VERSION file ($(cat VERSION)) does not match tag ${GITHUB_REF_NAME}"; exit 1; }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// MobaXterm-style strip of server info under an SSH tab.
+/// Strip of server info under an SSH tab.
 struct ServerStatusBar: View {
     @ObservedObject var stats: ServerStats
     @ObservedObject var settings = AppSettings.shared

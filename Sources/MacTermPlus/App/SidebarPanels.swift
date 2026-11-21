@@ -94,7 +94,7 @@ struct QuickConnectField: View {
 
 // MARK: - Files
 
-/// The file browser of the selected tab, like MobaXterm's SFTP sidebar.
+/// The file browser of the selected tab, shown in the sidebar.
 struct FilesPanel: View {
     @EnvironmentObject var workspace: Workspace
     @ViewState private var selection: Set<String> = []

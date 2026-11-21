@@ -201,7 +201,7 @@ private struct SessionDataSettings: View {
     var body: some View {
         Form {
             Section("Import") {
-                Text("Bring in sessions from MobaXterm, PuTTY, WinSCP, FileZilla, WinBox, Termius (CSV), ~/.ssh/config or a MacTerm+ export.")
+                Text("Bring in sessions from other SSH, SFTP and FTP apps, spreadsheets (CSV), ~/.ssh/config or a MacTerm+ export.")
                     .font(.callout).foregroundStyle(.secondary)
                 Button("Import Sessions…") { NotificationCenter.default.post(name: .importSessions, object: nil) }
             }
@@ -486,7 +486,7 @@ private struct KeychainSettings: View {
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Section("Servers saved by other apps") {
-                Text("\(serverCount) SSH/SFTP/FTP server login\(serverCount == 1 ? "" : "s") found in this Mac’s keychain (saved by Finder, Transmit, Cyberduck, FileZilla and others, including iCloud Keychain items).")
+                Text("\(serverCount) SSH/SFTP/FTP server login\(serverCount == 1 ? "" : "s") found in this Mac’s keychain (saved by Finder and other apps, including iCloud Keychain items).")
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
                 Button("Import Them…") { NotificationCenter.default.post(name: .importSessions, object: nil) }
                     .disabled(serverCount == 0)

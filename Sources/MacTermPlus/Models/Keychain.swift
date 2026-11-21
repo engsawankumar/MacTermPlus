@@ -117,7 +117,7 @@ enum Keychain {
         return status == errSecSuccess ? result as? Data : nil
     }
 
-    // MARK: Servers other apps saved (Finder, Transmit, Cyberduck, FileZilla…)
+    // MARK: Server logins other apps saved (Finder and others)
 
     struct ServerEntry: Hashable {
         let server: String

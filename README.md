@@ -2,20 +2,30 @@
 
 **Built by Bairagi.**
 
+## Download
+
+Get the latest version from **[Releases](https://github.com/engsawankumar/MacTermPlus/releases/latest)**:
+
+- **MacTerm+-x.y.z.dmg**: open it and drag **MacTerm+** to **Applications**.
+- **MacTerm+-x.y.z.zip**: unzip and move **MacTerm+** to Applications.
+
+Requires macOS 15 or later on Apple Silicon. The app isn't notarized by Apple yet, so the first time:
+**right-click MacTerm+ → Open → Open**. After that, **MacTerm+ → Check for Updates…** keeps it current.
+
 A native macOS (Apple Silicon) SSH terminal and SFTP file manager in one window.
 Open a server and you get a terminal with a live file browser beside it, plus a two-pane
 Mac ↔ server commander with a transfer queue.
 
 ## Features
 
-- **MobaXterm-style layout**: a big-icon toolbar, a sidebar rail (Sessions / Files / Macros / Tools / Tunnels), Quick connect, a Home tab, numbered tabs, and a welcome box in each SSH terminal.
+- **All-in-one layout**: a big-icon toolbar, a sidebar rail (Sessions / Files / Macros / Tools / Tunnels), Quick connect, a Home tab, numbered tabs, and a welcome box in each SSH terminal.
 - **Protocols**: SSH (terminal + files), SFTP (files only), FTP and FTPS (explicit TLS, or implicit on port 990). FTP uses the libcurl that ships with macOS.
 - **Files**: a sidebar browser for the current tab with **Follow terminal folder**, a two-pane Mac ↔ server view, a transfer queue, drag & drop, folder up/download, `..` row, Open With, and edit-and-save-back. All of this works over SFTP and FTP.
 - **Server info bar** (Remote monitoring): host, OS, CPU with a graph, memory, network, user, disk, uptime and load.
 - **Split view** (2 or 4 terminals) and **MultiExec** (type into all terminals at once).
 - **SSH tunnels** (local port forwarding, auto-start), **Macros** (saved commands, run in one or all terminals), **Tools** (SSH key generator, install your public key on a server, port checker).
 - **Sync across Macs** through iCloud Drive, Google Drive (desktop app), Dropbox, OneDrive or any folder. Sessions, macros and tunnels merge automatically, with a device list. Passwords can optionally sync end-to-end encrypted (PBKDF2 + AES-256-GCM, passphrase never uploaded).
-- **Import**: automatic scan of this Mac, including CrossOver/Wine/Whisky bottles (MobaXterm, PuTTY, WinSCP, FileZilla, WinBox), Cyberduck and ~/.ssh/config. FTP entries are imported too. **Export**: JSON, OpenSSH config or CSV.
+- **Import**: automatic scan of this Mac for sessions saved by other SSH, SFTP and FTP apps (including Windows apps running in compatibility bottles), Keychain logins and ~/.ssh/config, plus import from common session files and CSV. **Export**: JSON, OpenSSH config or CSV.
 - **Look**: 17 terminal themes, fonts, padding, icon styles (Monochrome / Colorful / Vivid), accent colors, light/dark mode.
 - **Keychain**: export sessions with passwords to Apple's Passwords app (iCloud Keychain) and import them back; import SSH/FTP logins other apps saved in the keychain; direct iCloud Keychain storage on Developer ID builds.
 - **Per-session colors & terminal themes**, with session-colored tabs.

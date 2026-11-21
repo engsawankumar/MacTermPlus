@@ -14,7 +14,9 @@ DRY_RUN=0
 VERSION="${VERSION:-$(cat VERSION)}"
 GITHUB_REPO="${GITHUB_REPO:-$(grep -E '^GITHUB_REPO=' release.config | cut -d= -f2)}"
 TAG="v$VERSION"
-ZIP="dist/MacTermPlus-$VERSION.zip"
+NAME="MacTerm+-$VERSION"
+ZIP="dist/$NAME.zip"
+DMG="dist/$NAME.dmg"
 
 if [[ "$GITHUB_REPO" == OWNER/* || -z "$GITHUB_REPO" ]] && [ $DRY_RUN -eq 0 ]; then
   echo "Set GITHUB_REPO in release.config first (e.g. yourname/MacTermPlus)." >&2; exit 1
@@ -27,11 +29,20 @@ fi
 echo "▸ Building MacTerm+ $VERSION for $GITHUB_REPO"
 VERSION="$VERSION" GITHUB_REPO="$GITHUB_REPO" ./scripts/build-app.sh
 
-echo "▸ Packaging"
-rm -f "$ZIP" "$ZIP.sha256"
+echo "▸ Packaging zip"
+rm -f "$ZIP" "$ZIP.sha256" "$DMG" "$DMG.sha256"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "dist/MacTerm+.app" "$ZIP"
-(cd dist && shasum -a 256 "$(basename "$ZIP")" > "$(basename "$ZIP").sha256")
-cat "$ZIP.sha256"
+
+echo "▸ Building DMG"
+STAGE="$(mktemp -d)/MacTerm+"
+mkdir -p "$STAGE"
+/usr/bin/ditto "dist/MacTerm+.app" "$STAGE/MacTerm+.app"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -volname "MacTerm+ $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$DMG" >/dev/null
+rm -rf "$(dirname "$STAGE")"
+
+(cd dist && shasum -a 256 "$NAME.zip" > "$NAME.zip.sha256" && shasum -a 256 "$NAME.dmg" > "$NAME.dmg.sha256")
+cat "$ZIP.sha256" "$DMG.sha256"
 
 # Release notes: the CHANGELOG section for this version.
 NOTES="$(mktemp)"
@@ -40,16 +51,16 @@ awk -v v="$VERSION" '$0 ~ "^## "v"$" {f=1; next} /^## / {f=0} f' CHANGELOG.md > 
 {
   echo
   echo "---"
-  echo "**Install:** download \`$(basename "$ZIP")\`, unzip, move **MacTerm+** to Applications."
+  echo "**Install:** download \`$NAME.dmg\`, open it and drag **MacTerm+** to **Applications** (or use \`$NAME.zip\`)."
   echo "First launch of a build not signed by Apple: right-click the app → **Open** → **Open**."
   echo "Already installed? Use **MacTerm+ → Check for Updates…**"
 } >> "$NOTES"
 
 if [ $DRY_RUN -eq 1 ]; then
-  echo "▸ Dry run — files ready in dist/:"; ls -lh dist/ | grep -E "zip"; echo; cat "$NOTES"; exit 0
+  echo "▸ Dry run — files ready in dist/:"; ls -lh dist/ | grep -E "zip|dmg"; echo; cat "$NOTES"; exit 0
 fi
 
 command -v gh >/dev/null || { echo "Install the GitHub CLI (brew install gh) and run: gh auth login" >&2; exit 1; }
 echo "▸ Publishing $TAG to github.com/$GITHUB_REPO"
-gh release create "$TAG" "$ZIP" "$ZIP.sha256" --repo "$GITHUB_REPO" --title "MacTerm+ $VERSION" --notes-file "$NOTES"
+gh release create "$TAG" "$DMG" "$DMG.sha256" "$ZIP" "$ZIP.sha256" --repo "$GITHUB_REPO" --title "MacTerm+ $VERSION" --notes-file "$NOTES"
 echo "✓ Released. Users get it from MacTerm+ → Check for Updates."
