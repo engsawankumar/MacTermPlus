@@ -433,6 +433,7 @@ enum DebugHooks {
         if Showcase.isOn, env["MTP_SHOWCASE_OPEN"] != nil {
             if let p = Showcase.sessions().first { workspace.open(p, secret: nil) }
         }
+        if env["MTP_QUICK"] == "1" { AppSettings.shared.showQuickCommands = true }
         if let text = env["MTP_SEND"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { workspace.selected?.sendText(text + "\r") }
         }

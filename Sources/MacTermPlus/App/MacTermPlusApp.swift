@@ -75,6 +75,16 @@ struct MacTermPlusApp: App {
             CommandGroup(replacing: .help) {
                 HelpMenuItems()
             }
+            CommandGroup(after: .sidebar) {
+                Button("Quick Commands") { AppSettings.shared.showQuickCommands.toggle() }
+                    .keyboardShortcut("k", modifiers: [.command, .shift])
+                Button("Search Quick Commands") {
+                    AppSettings.shared.showQuickCommands = true
+                    DispatchQueue.main.async { NotificationCenter.default.post(name: .focusQuickCommandSearch, object: nil) }
+                }
+                .keyboardShortcut("f", modifiers: [.command, .option])
+                Divider()
+            }
             CommandMenu("Tabs") {
                 Button("Next Tab") { workspace.selectNext(1) }
                     .keyboardShortcut("]", modifiers: [.command, .shift])

@@ -33,14 +33,14 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 
 | Feature | What you get |
 |---|---|
-| 🖥 **Terminal** | Tabs, split view (2 or 4 terminals), 17 color themes, per-server themes, copy & paste with preview, macros |
+| 🖥 **Terminal** | Tabs, split view (2 or 4 terminals), 17 color themes, per-server themes, copy & paste with preview, macros, **Quick Commands** (50+ ready-made server commands in folders, starred favorites, search) |
 | 📁 **Files** | File browser beside the terminal, two-pane Mac ↔ server view, drag & drop, upload and download whole folders, edit any file in your favorite Mac app |
 | 🔐 **Permissions** | Change file permissions with checkboxes, presets or octal values, for one file or a whole folder |
 | 📊 **Server info** | CPU graph, memory, network speed, disk space, uptime and the server's OS at a glance |
 | 🔀 **Tunnels** | Reach databases and admin pages behind a server through a port on your Mac |
 | ⌨️ **MultiExec** | Type once, run in every open terminal |
 | ⬇️ **Import** | Finds sessions saved by other apps on this Mac (including Windows apps in compatibility layers), plus `~/.ssh/config`, CSV and the Passwords app |
-| ☁️ **Sync** | Keep sessions, macros and tunnels the same on all your Macs with iCloud Drive or Google Drive; passwords optional and end-to-end encrypted |
+| ☁️ **Sync** | Keep sessions, macros, quick commands and tunnels the same on all your Macs with iCloud Drive or Google Drive; passwords optional and end-to-end encrypted |
 | 🎨 **Make it yours** | Colors and OS icons for servers, fonts, padding, icon styles, accent colors |
 
 ## Screenshots

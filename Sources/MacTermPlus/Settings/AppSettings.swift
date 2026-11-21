@@ -111,6 +111,10 @@ final class AppSettings: ObservableObject {
     @Published var confirmDelete: Bool { didSet { d.set(confirmDelete, forKey: "confirmDelete") } }
     @Published var followTerminalFolder: Bool { didSet { d.set(followTerminalFolder, forKey: "followTerminalFolder") } }
 
+    // Quick Commands
+    @Published var showQuickCommands: Bool { didSet { d.set(showQuickCommands, forKey: "showQuickCommands") } }
+    @Published var quickCommandsButton: Bool { didSet { d.set(quickCommandsButton, forKey: "quickCommandsButton") } }
+
     // Status bar
     @Published var showStatusBar: Bool { didSet { d.set(showStatusBar, forKey: "showStatusBar") } }
     @Published var statusItems: Set<StatusItem> {
@@ -145,6 +149,8 @@ final class AppSettings: ObservableObject {
         showHiddenFiles = bool("showHiddenFiles", false)
         confirmDelete = bool("confirmDelete", true)
         followTerminalFolder = bool("followTerminalFolder", true)
+        showQuickCommands = bool("showQuickCommands", false)
+        quickCommandsButton = bool("quickCommandsButton", true)
 
         showStatusBar = bool("showStatusBar", true)
         if let saved = ud.array(forKey: "statusItems") as? [String] {

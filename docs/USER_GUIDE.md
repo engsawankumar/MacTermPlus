@@ -189,7 +189,7 @@ Choose **OpenSSH config → Use ~/.ssh/config**. Each `Host` entry becomes a ses
 
 ### Toolbar
 
-The big buttons along the top: **Session** (new), **Sessions**, **Files**, **Terminal** (local shell), **View** (hide or show the sidebar), **Split**, **MultiExec**, **Tunneling**, **Macros**, **Tools**, **Sync**, **Settings**, **Help** and **Exit**. Settings → General → Icon style changes how the icons look.
+The big buttons along the top: **Session** (new), **Sessions**, **Files**, **Terminal** (local shell), **View** (hide or show the sidebar), **Split**, **MultiExec**, **Tunneling**, **Commands** (Quick Commands), **Macros**, **Tools**, **Sync**, **Settings**, **Help** and **Exit**. Settings → General → Icon style changes how the icons look.
 
 ### Sidebar
 
@@ -258,6 +258,12 @@ Sidebar → **Tunnels** → **New Tunnel**: pick the SSH session, the local port
 The session must use a private key, or have its password saved in the Keychain, because tunnels run in the background without asking. If the local port is already used by another app, pick another one.
 
 ## Macros & Tools
+
+### Quick Commands
+
+Click **Commands** in the toolbar (or press **⇧⌘K**) to open the Quick Commands panel on the right; click **✕** or press ⇧⌘K again to close it. It holds ready-made server commands in folders (**Common**, **System & Logs**, **Apache**, **LiteSpeed**, **Nginx**, **MySQL / MariaDB**, **PHP**, **Docker**, **Firewall & Network**, **Updates**). The 10 most used, such as top -c, htop, disk check and restarting Apache, LiteSpeed, Nginx or MySQL, are **starred** and shown at the top. Click ☆ on any command to star it too.
+
+Type in the **search** box (⌥⌘F) to filter by name, command or folder; Return runs the first match. Double-click or ▶ runs a command in the current terminal. Right-click a command to run it in all terminals, type it without running, star, edit, duplicate, move to another folder, copy or delete it. Use **+** for a new command, and **⋯** for New Folder, collapsing folders and **Restore Built-in Commands**. Right-click a folder to rename or delete it. Commands that use sudo ask for your password in the terminal. Hide the toolbar button in Settings → Files, or right-click it → Hide This Button. Quick Commands sync between your Macs with your sessions.
 
 ### Macros
 

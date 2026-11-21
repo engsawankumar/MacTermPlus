@@ -33,6 +33,10 @@ struct ContentView: View {
                 }
                 .frame(minWidth: 500)
                 .layoutPriority(1)
+                if settings.showQuickCommands {
+                    QuickCommandsPanel()
+                        .frame(minWidth: 260, idealWidth: 320, maxWidth: 520)
+                }
             }
         }
         .tint(settings.accent.color)
@@ -121,6 +125,7 @@ struct MainToolbar: View {
     @EnvironmentObject var workspace: Workspace
     @ObservedObject var multiExec = MultiExec.shared
     @ObservedObject var sync = SyncManager.shared
+    @ObservedObject var settings = AppSettings.shared
     @Binding var panel: SidebarPanel
     @Binding var showSidebar: Bool
     let newSession: () -> Void
@@ -165,6 +170,16 @@ struct MainToolbar: View {
             ToolButton(icon: "square.stack.3d.down.forward.fill", color: .pink, title: "MultiExec",
                        help: "Type in all terminals at once", active: multiExec.enabled) { multiExec.enabled.toggle() }
             ToolButton(icon: "point.3.connected.trianglepath.dotted", color: .green, title: "Tunneling", help: "SSH tunnels") { show(.tunnels) }
+            if settings.quickCommandsButton {
+                ToolButton(icon: "bolt.horizontal.fill", color: .mint, title: "Commands",
+                           help: "Quick Commands: ready-made server commands (⇧⌘K)", active: settings.showQuickCommands) {
+                    withAnimation(.easeOut(duration: 0.15)) { settings.showQuickCommands.toggle() }
+                }
+                .contextMenu {
+                    Button(settings.showQuickCommands ? "Close Quick Commands" : "Open Quick Commands") { settings.showQuickCommands.toggle() }
+                    Button("Hide This Button") { settings.showQuickCommands = false; settings.quickCommandsButton = false }
+                }
+            }
             ToolButton(icon: "paperplane.fill", color: .blue, title: "Macros", help: "Saved commands") { show(.macros) }
             ToolButton(icon: "wrench.and.screwdriver.fill", color: .red, title: "Tools", help: "Key generator, port checker…") { show(.tools) }
             Divider().frame(height: 36).padding(.horizontal, 4)

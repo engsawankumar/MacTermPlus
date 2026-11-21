@@ -74,8 +74,31 @@ struct SyncDocument: Codable {
     var macrosModified = Date.distantPast
     var tunnels: [TunnelConfig] = []
     var tunnelsModified = Date.distantPast
+    var quickCommands: [QuickCommand] = []
+    var quickFolders: [String] = []
+    var quickCommandsModified = Date.distantPast
     var devices: [DeviceInfo] = []
     var vault: SecretVault?
+
+    init() {}
+
+    /// Tolerant: files written by older or newer versions (missing or extra fields) still load.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        format = try c.decodeIfPresent(Int.self, forKey: .format) ?? 1
+        updated = try c.decodeIfPresent(Date.self, forKey: .updated) ?? Date()
+        sessions = try c.decodeIfPresent([SessionProfile].self, forKey: .sessions) ?? []
+        deleted = try c.decodeIfPresent([String: Date].self, forKey: .deleted) ?? [:]
+        macros = try c.decodeIfPresent([Macro].self, forKey: .macros) ?? []
+        macrosModified = try c.decodeIfPresent(Date.self, forKey: .macrosModified) ?? .distantPast
+        tunnels = try c.decodeIfPresent([TunnelConfig].self, forKey: .tunnels) ?? []
+        tunnelsModified = try c.decodeIfPresent(Date.self, forKey: .tunnelsModified) ?? .distantPast
+        quickCommands = (try? c.decodeIfPresent([QuickCommand].self, forKey: .quickCommands)) ?? []
+        quickFolders = (try? c.decodeIfPresent([String].self, forKey: .quickFolders)) ?? []
+        quickCommandsModified = (try? c.decodeIfPresent(Date.self, forKey: .quickCommandsModified)) ?? .distantPast
+        devices = try c.decodeIfPresent([DeviceInfo].self, forKey: .devices) ?? []
+        vault = try c.decodeIfPresent(SecretVault.self, forKey: .vault)
+    }
 }
 
 /// Passwords encrypted with a key derived from the user's sync passphrase (PBKDF2-SHA256 + AES-GCM).
@@ -178,6 +201,12 @@ final class SyncManager: ObservableObject {
         nc.addObserver(forName: MacroStore.changed, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 UserDefaults.standard.set(Date(), forKey: "sync.macrosModified")
+                self?.scheduleSync(2)
+            }
+        }
+        nc.addObserver(forName: QuickCommandStore.changed, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                UserDefaults.standard.set(Date(), forKey: "sync.quickCommandsModified")
                 self?.scheduleSync(2)
             }
         }
@@ -296,6 +325,9 @@ final class SyncManager: ObservableObject {
         local.macrosModified = ud.object(forKey: "sync.macrosModified") as? Date ?? .distantPast
         local.tunnels = TunnelManager.shared.tunnels
         local.tunnelsModified = ud.object(forKey: "sync.tunnelsModified") as? Date ?? .distantPast
+        local.quickCommands = QuickCommandStore.shared.commands
+        local.quickFolders = QuickCommandStore.shared.folders
+        local.quickCommandsModified = ud.object(forKey: "sync.quickCommandsModified") as? Date ?? .distantPast
 
         var merged = merge(remote, local)
         let before = Set(store.sessions.map(\.id))
@@ -356,6 +388,10 @@ final class SyncManager: ObservableObject {
             TunnelManager.shared.replaceAll(merged.tunnels)
             ud.set(merged.tunnelsModified, forKey: "sync.tunnelsModified")
         }
+        if merged.quickCommandsModified > local.quickCommandsModified {
+            QuickCommandStore.shared.replaceAll(commands: merged.quickCommands, folders: merged.quickFolders)
+            ud.set(merged.quickCommandsModified, forKey: "sync.quickCommandsModified")
+        }
         manager.devices = merged.devices
 
         let added = after.subtracting(before).count, removed = before.subtracting(after).count
@@ -387,6 +423,11 @@ final class SyncManager: ObservableObject {
         else { out.macros = b.macros; out.macrosModified = b.macrosModified }
         if a.tunnelsModified >= b.tunnelsModified { out.tunnels = a.tunnels; out.tunnelsModified = a.tunnelsModified }
         else { out.tunnels = b.tunnels; out.tunnelsModified = b.tunnelsModified }
+        if a.quickCommandsModified >= b.quickCommandsModified {
+            out.quickCommands = a.quickCommands; out.quickFolders = a.quickFolders; out.quickCommandsModified = a.quickCommandsModified
+        } else {
+            out.quickCommands = b.quickCommands; out.quickFolders = b.quickFolders; out.quickCommandsModified = b.quickCommandsModified
+        }
         var devs: [String: DeviceInfo] = [:]
         for dv in a.devices + b.devices where (devs[dv.id]?.lastSync ?? .distantPast) < dv.lastSync { devs[dv.id] = dv }
         out.devices = Array(devs.values)

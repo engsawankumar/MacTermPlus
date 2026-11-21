@@ -167,6 +167,7 @@ private struct FileSettings: View {
             Section("File browser") {
                 Toggle("Show hidden files (dot files) by default", isOn: $settings.showHiddenFiles)
                 Toggle("Follow terminal folder (file browser follows the shell’s cd)", isOn: $settings.followTerminalFolder)
+                Toggle("Show the Commands button in the toolbar (Quick Commands, ⇧⌘K)", isOn: $settings.quickCommandsButton)
                 Toggle("Ask before deleting files on the server", isOn: $settings.confirmDelete)
             }
             Section {
