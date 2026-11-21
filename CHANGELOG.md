@@ -3,6 +3,11 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.3
+- MacTerm+ is now signed with a permanent developer identity. After this update macOS asks for
+  Keychain and folder access **one last time**: choose **Always Allow** and future updates keep it.
+- Updates are only installed if they're signed by the same MacTerm+ developer identity.
+
 ## 1.0.2
 - New **Welcome window**: quick start (add a server, import, sync, guide) and news from the MacTerm+ team.
   It opens on first launch, after an update, or when there's a new message; turn it off in the window or in Settings → General.

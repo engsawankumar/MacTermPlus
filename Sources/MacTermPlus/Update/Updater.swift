@@ -1,5 +1,6 @@
 import AppKit
 import CryptoKit
+import Security
 import Foundation
 import SwiftUI
 
@@ -169,6 +170,7 @@ final class Updater: ObservableObject {
             let newVersion = info["CFBundleShortVersionString"] as? String ?? ""
             guard Self.isNewer(newVersion, than: currentVersion) else { throw UpdateError.badBundle("version \(newVersion) isn’t newer") }
             try run("/usr/bin/codesign", ["--verify", "--deep", newApp.path])
+            try Self.checkSameSigner(newApp)
 
             let current = Bundle.main.bundleURL
             guard canInstallInPlace, FileManager.default.isWritableFile(atPath: current.deletingLastPathComponent().path) else {
@@ -202,6 +204,28 @@ final class Updater: ObservableObject {
                 Task { @MainActor in self?.state = .downloading(f) }
             }
             task.resume()
+        }
+    }
+
+    /// The update must be signed by the same identity as the running app (when the running app has a
+    /// permanent identity). This blocks look-alike downloads and keeps macOS permissions valid.
+    private static func checkSameSigner(_ newApp: URL) throws {
+        var selfCode: SecCode?
+        var requirement: SecRequirement?
+        guard SecCodeCopySelf([], &selfCode) == errSecSuccess, let selfCode,
+              SecCodeCopyDesignatedRequirement(selfCode as! SecStaticCode, [], &requirement) == errSecSuccess,
+              let requirement else { return }
+        var text: CFString?
+        SecRequirementCopyString(requirement, [], &text)
+        // Ad-hoc builds (requirement is just a cdhash) can't pin a signer; accept any valid signature.
+        guard let t = text as String?, t.contains("certificate") else { return }
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(newApp as CFURL, [], &staticCode) == errSecSuccess, let staticCode else {
+            throw UpdateError.badBundle("its signature can’t be read")
+        }
+        let status = SecStaticCodeCheckValidity(staticCode, SecCSFlags(rawValue: kSecCSCheckAllArchitectures), requirement)
+        guard status == errSecSuccess else {
+            throw UpdateError.badBundle("it isn’t signed by the MacTerm+ developer (code \(status))")
         }
     }
 

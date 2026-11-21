@@ -111,6 +111,20 @@ PROVISIONING_PROFILE=~/Downloads/MacTermPlus.provisionprofile ./scripts/build-ap
 
 Without them, the Passwords-app export/import (Settings → Keychain) gets sessions into iCloud Keychain instead.
 
+## Code signing (keep permissions across updates)
+
+Run once on the Mac you release from:
+
+```bash
+./scripts/setup-signing.sh
+```
+
+It creates a permanent signing certificate in its own keychain file (`~/.macterm-signing/`); `build-app.sh`
+then signs every build with it. Because the signature stays the same, macOS keeps users' Keychain
+**Always Allow** choices and folder permissions after updates, and the in-app updater refuses updates
+signed by anyone else. **Back up `~/.macterm-signing/`.** Every future release must be signed with the
+same certificate. `release.sh` won't publish unsigned builds.
+
 ## Publishing an update (GitHub Releases)
 
 The app checks `https://github.com/<GITHUB_REPO>/releases/latest` and installs newer versions in place
@@ -127,8 +141,9 @@ echo 0.5.1 > VERSION                     # bump the version
 ./scripts/release.sh                     # builds, zips, checksums, creates the GitHub release
 ```
 
-Or let GitHub build it: commit, then `git tag v0.5.1 && git push --follow-tags`. The workflow in
-`.github/workflows/release.yml` builds on a macOS runner and publishes the release.
+Releases are published from your Mac (they must be signed with your certificate). The GitHub
+workflows compile every push as a check; a tagged build on GitHub won't publish unless the signing
+certificate is added to the repository's secrets.
 
 `./scripts/release.sh --dry-run` builds and packages without publishing.
 

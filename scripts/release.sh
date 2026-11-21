@@ -29,6 +29,16 @@ fi
 echo "▸ Building MacTerm+ $VERSION for $GITHUB_REPO"
 VERSION="$VERSION" GITHUB_REPO="$GITHUB_REPO" ./scripts/build-app.sh
 
+# Never publish builds that aren't signed with the permanent identity: users would be asked
+# for Keychain and folder permissions again after updating.
+if ! codesign -d -r- "dist/MacTerm+.app" 2>&1 | grep -q "certificate"; then
+  if [ "${ALLOW_ADHOC:-0}" != "1" ]; then
+    echo "✗ dist/MacTerm+.app is not signed with the MacTerm+ identity (run ./scripts/setup-signing.sh)." >&2
+    echo "  Not publishing. (Set ALLOW_ADHOC=1 to override.)" >&2
+    [ -n "${CI:-}" ] && exit 0 || exit 1
+  fi
+fi
+
 echo "▸ Packaging zip"
 rm -f "$ZIP" "$ZIP.sha256" "$DMG" "$DMG.sha256"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "dist/MacTerm+.app" "$ZIP"

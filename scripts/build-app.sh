@@ -56,8 +56,17 @@ if [ -n "${SIGN_IDENTITY:-}" ] && [ -n "${TEAM_ID:-}" ] && [ -n "${PROVISIONING_
   sed -e "s/TEAM_ID/$TEAM_ID/g" -e "s/BUNDLE_ID/$BUNDLE_ID/g" Resources/MacTermPlus.entitlements.template > "$ENT"
   codesign --force --options runtime --timestamp --entitlements "$ENT" --sign "$SIGN_IDENTITY" "$APP"
   echo "Signed with $SIGN_IDENTITY (iCloud Keychain enabled). Notarize before sharing: xcrun notarytool submit …"
+elif [ -f "$HOME/.macterm-signing/signing.keychain-db" ]; then
+  # Permanent MacTerm+ identity (scripts/setup-signing.sh): same signature every build, so macOS
+  # keeps Keychain "Always Allow" choices and folder permissions across updates.
+  KC="$HOME/.macterm-signing/signing.keychain-db"
+  security unlock-keychain -p "$(cat "$HOME/.macterm-signing/keychain-password")" "$KC"
+  codesign --force --deep --keychain "$KC" --sign "MacTerm+ Code Signing (Bairagi)" "$APP"
+  echo "Signed with the permanent MacTerm+ identity."
 else
-  # Ad-hoc signature so it runs on this Mac. iCloud Keychain needs the Developer ID path above.
+  # Ad-hoc signature: runs on this Mac, but macOS asks for permissions again after each update.
+  # Run ./scripts/setup-signing.sh once to fix that.
   codesign --force --deep --sign - "$APP"
+  echo "Warning: ad-hoc signed (run ./scripts/setup-signing.sh for a permanent identity)." >&2
 fi
 echo "Built $APP"
