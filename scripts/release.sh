@@ -20,6 +20,10 @@ if [[ "$GITHUB_REPO" == OWNER/* || -z "$GITHUB_REPO" ]] && [ $DRY_RUN -eq 0 ]; t
   echo "Set GITHUB_REPO in release.config first (e.g. yourname/MacTermPlus)." >&2; exit 1
 fi
 
+if [ $DRY_RUN -eq 0 ] && command -v gh >/dev/null && gh release view "$TAG" --repo "$GITHUB_REPO" >/dev/null 2>&1; then
+  echo "Release $TAG already exists on github.com/$GITHUB_REPO — nothing to do."; exit 0
+fi
+
 echo "▸ Building MacTerm+ $VERSION for $GITHUB_REPO"
 VERSION="$VERSION" GITHUB_REPO="$GITHUB_REPO" ./scripts/build-app.sh
 
@@ -46,9 +50,6 @@ if [ $DRY_RUN -eq 1 ]; then
 fi
 
 command -v gh >/dev/null || { echo "Install the GitHub CLI (brew install gh) and run: gh auth login" >&2; exit 1; }
-if gh release view "$TAG" --repo "$GITHUB_REPO" >/dev/null 2>&1; then
-  echo "Release $TAG already exists on github.com/$GITHUB_REPO — nothing to do."; exit 0
-fi
 echo "▸ Publishing $TAG to github.com/$GITHUB_REPO"
 gh release create "$TAG" "$ZIP" "$ZIP.sha256" --repo "$GITHUB_REPO" --title "MacTerm+ $VERSION" --notes-file "$NOTES"
 echo "✓ Released. Users get it from MacTerm+ → Check for Updates."
