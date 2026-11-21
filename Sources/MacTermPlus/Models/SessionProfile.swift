@@ -151,6 +151,7 @@ final class SessionStore: ObservableObject {
         fileURL = dir.appendingPathComponent("sessions.json")
         tombstoneURL = dir.appendingPathComponent("deleted-sessions.json")
         load()
+        if Showcase.isOn { sessions = Showcase.sessions(); deleted = [:] }   // never the user's own sessions
         NotificationCenter.default.addObserver(forName: Self.osDetected, object: nil, queue: .main) { [weak self] note in
             MainActor.assumeIsolated {
                 guard let self, let id = note.userInfo?["id"] as? UUID, let os = note.userInfo?["os"] as? String,

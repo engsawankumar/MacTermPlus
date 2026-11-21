@@ -1,5 +1,6 @@
 import AppKit
 import Citadel
+import SwiftTerm
 import Foundation
 import NIOCore
 import NIOSSH
@@ -303,6 +304,25 @@ enum DebugHooks {
         } else if env["MTP_OPEN"] == "import" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .importSessions, object: nil) }
         }
+        if let size = env["MTP_WINDOW_SIZE"]?.split(separator: "x").compactMap({ Double($0) }), size.count == 2 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                for w in NSApp.windows where w.isVisible && w.frame.width > 400 {
+                    w.setContentSize(NSSize(width: size[0], height: size[1])); w.center()
+                }
+            }
+        }
+        if let panel = env["MTP_PANEL"].flatMap(SidebarPanel.init(rawValue:)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { workspace.sidebarRequest = panel }
+        }
+        if env["MTP_MODE"] == "files" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { if case .ssh(let t) = workspace.tabs.last { t.mode = .commander } }
+        }
+        if let tab = env["MTP_SETTINGS_TAB"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { NotificationCenter.default.post(name: .showSettingsTab, object: tab) }
+        }
+        if Showcase.isOn, env["MTP_SHOWCASE_OPEN"] != nil {
+            if let p = Showcase.sessions().first { workspace.open(p, secret: nil) }
+        }
         if let text = env["MTP_SEND"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { workspace.selected?.sendText(text + "\r") }
         }
@@ -319,10 +339,65 @@ enum DebugHooks {
                     print("TERMINAL<<\n\(t.terminal.terminalView.getSelection() ?? "")\n>>")
                     print("BROWSER PATH \(t.remote.path) follow=\(t.remote.followTerminal)")
                 }
+                // Force terminals to redraw everything (they normally draw only changed lines).
+                func resizeKick(_ v: NSView) {
+                    if v is TerminalView { let f = v.frame; v.setFrameSize(NSSize(width: f.width - 1, height: f.height)); v.setFrameSize(f.size) }
+                    v.subviews.forEach(resizeKick)
+                }
+                resizeKick(view)
                 func invalidate(_ v: NSView) { v.needsDisplay = true; v.subviews.forEach(invalidate) }
                 invalidate(view)
                 view.displayIfNeeded()
                 view.cacheDisplay(in: view.bounds, to: rep)
+                // Terminals draw into layers that cacheDisplay skips: render those layers and paste them in.
+                func terminals(_ v: NSView) -> [NSView] { (v is TerminalView ? [v] : []) + v.subviews.flatMap(terminals) }
+                if let ctx = NSGraphicsContext(bitmapImageRep: rep) {
+                    for t in terminals(view) {
+                        guard let layer = t.layer else { continue }
+                        if env["MTP_LAYERDEBUG"] != nil {
+                            func dump(_ l: CALayer, _ depth: Int) {
+                                print(String(repeating: "  ", count: depth) + "\(type(of: l)) bg=\(l.backgroundColor.map { "\($0.components ?? [])" } ?? "nil") opaque=\(l.isOpaque) contents=\(l.contents != nil) frame=\(l.frame)")
+                                l.sublayers?.forEach { dump($0, depth + 1) }
+                            }
+                            dump(layer, 0)
+                            print("nativeBg", (t as? TerminalView)?.nativeBackgroundColor ?? "-")
+                        }
+                        let r = t.convert(t.bounds, to: view)          // in view coordinates (bottom-left origin)
+                        let cg = ctx.cgContext
+                        if let tv = t as? TerminalView, let box = t.superview {   // padded container background
+                            cg.setFillColor(tv.nativeBackgroundColor.cgColor)
+                            cg.fill(box.convert(box.bounds, to: view))
+                        }
+                        // Render the terminal layer into its own bitmap, turn its white backing into the
+                        // theme background, then paste it in place.
+                        guard let tv = t as? TerminalView else { continue }
+                        let px = Int(r.width * 2), py = Int(r.height * 2)
+                        guard let tmp = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: py, bitsPerSample: 8,
+                                                         samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                                         bytesPerRow: px * 4, bitsPerPixel: 32),
+                              let tctx = NSGraphicsContext(bitmapImageRep: tmp) else { continue }
+                        let tcg = tctx.cgContext
+                        tcg.scaleBy(x: 2, y: 2)
+                        if t.isFlipped { tcg.translateBy(x: 0, y: r.height); tcg.scaleBy(x: 1, y: -1) }
+                        layer.render(in: tcg)
+                        tcg.flush()
+                        let bg = tv.nativeBackgroundColor.usingColorSpace(.deviceRGB) ?? .black
+                        let br = UInt8(bg.redComponent * 255), bgc = UInt8(bg.greenComponent * 255), bb = UInt8(bg.blueComponent * 255)
+                        if let data = tmp.bitmapData {
+                            for i in stride(from: 0, to: px * py * 4, by: 4) {
+                                let a = data[i + 3]
+                                if a < 10 || (data[i] > 244 && data[i + 1] > 244 && data[i + 2] > 244) {
+                                    data[i] = br; data[i + 1] = bgc; data[i + 2] = bb; data[i + 3] = 255
+                                }
+                            }
+                        }
+                        tmp.size = r.size
+                        NSGraphicsContext.saveGraphicsState()
+                        NSGraphicsContext.current = ctx
+                        tmp.draw(in: r)
+                        NSGraphicsContext.restoreGraphicsState()
+                    }
+                }
                 try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: out))
                 if env["MTP_QUIT"] == "1" { NSApp.terminate(nil) }
             }

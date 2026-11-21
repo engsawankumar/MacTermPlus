@@ -17,7 +17,10 @@ final class LocalFileBrowser: ObservableObject {
         return [FileItem.parentRow(of: path, parent: url.deletingLastPathComponent().path)] + list
     }
 
-    init() { load(path) }
+    init() {
+        if Showcase.isOn, let demo = ProcessInfo.processInfo.environment["MTP_LOCAL_DIR"] { path = demo }
+        load(path)
+    }
 
     func load(_ newPath: String) {
         let dir = URL(fileURLWithPath: newPath, isDirectory: true)
@@ -40,6 +43,7 @@ final class LocalFileBrowser: ObservableObject {
                 )
                 item.owner = attrs?[.ownerAccountName] as? String ?? ""
                 item.group = attrs?[.groupOwnerAccountName] as? String ?? ""
+                if Showcase.isOn { item.owner = "you"; item.group = "staff" }
                 return item
             })
             path = dir.path

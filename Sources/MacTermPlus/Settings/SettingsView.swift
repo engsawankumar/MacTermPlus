@@ -23,6 +23,7 @@ struct SettingsView: View {
                 .tabItem { Label("Keychain", systemImage: "key.icloud") }.tag("keychain")
         }
         .onReceive(NotificationCenter.default.publisher(for: .showSyncSettings)) { _ in tab = "sync" }
+        .onReceive(NotificationCenter.default.publisher(for: .showSettingsTab)) { note in if let t = note.object as? String { tab = t } }
         .frame(width: 640)
         .tint(settings.accent.color)
         .preferredColorScheme(settings.appearance.colorScheme)
@@ -333,6 +334,7 @@ extension Notification.Name {
     static let importSessions = Notification.Name("MacTermPlus.importSessions")
     static let exportSessions = Notification.Name("MacTermPlus.exportSessions")
     static let showHelp = Notification.Name("MacTermPlus.showHelp")
+    static let showSettingsTab = Notification.Name("MacTermPlus.showSettingsTab")
 }
 
 private struct SyncSettings: View {

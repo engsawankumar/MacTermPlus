@@ -24,7 +24,8 @@ final class SSHTab: ObservableObject, Identifiable {
     init(profile: SessionProfile, secret: String?) {
         connection = SSHConnection(profile: profile, secret: secret)
         terminal = SSHTerminalController(connection: connection)
-        remote = RemoteFileBrowser(fs: SFTPFileSystem(connection: connection), title: profile.displayName)
+        remote = RemoteFileBrowser(fs: Showcase.isOn ? ShowcaseFileSystem() : SFTPFileSystem(connection: connection),
+                                   title: profile.displayName)
         filesOnly = profile.kind == .sftp
         mode = profile.kind == .sftp ? .commander : .terminal
         terminal.onDirectoryChange = { [weak remote] dir in remote?.terminalChangedDirectory(dir) }
@@ -34,6 +35,11 @@ final class SSHTab: ObservableObject, Identifiable {
                                             userInfo: ["id": profileID, "os": os])
         }
         if filesOnly { Task { [weak self] in _ = try? await self?.connection.connectedClient() } }
+        if Showcase.isOn {
+            connection.state = .connected
+            stats.fillShowcase()
+            return
+        }
         stateWatch = connection.$state.sink { [weak self] state in
             guard let self else { return }
             if state == .connected {
@@ -199,6 +205,7 @@ final class Workspace: ObservableObject {
     }
 
     private func remember(_ profile: SessionProfile) {
+        guard !Showcase.isOn else { return }
         recentIDs.removeAll { $0 == profile.id }
         recentIDs.insert(profile.id, at: 0)
         recentIDs = Array(recentIDs.prefix(12))

@@ -65,6 +65,18 @@ final class ServerStats: ObservableObject {
         task = nil
     }
 
+    /// Demo numbers for README screenshots (Showcase mode).
+    func fillShowcase() {
+        host = "web-01"; user = "deploy"; os = "Ubuntu 24.04.1 LTS"; osID = "ubuntu"
+        cpuHistory = [12, 18, 15, 22, 35, 28, 19, 24, 41, 33, 27, 21, 18, 26, 30, 23, 19, 17, 22, 25, 29, 24, 20, 18]
+        cpuPercent = 18
+        memTotal = 8 * 1_073_741_824; memUsed = UInt64(2.96 * 1_073_741_824)
+        rxRate = 184_000; txRate = 42_500
+        diskTotal = 80 * 1_073_741_824; diskUsed = UInt64(33.3 * 1_073_741_824); diskFree = UInt64(46.7 * 1_073_741_824)
+        uptime = 5 * 86400 + 4 * 3600; load = "0.18 0.22 0.19"
+        hasData = true
+    }
+
     private func parse(_ text: String) {
         var values: [String: String] = [:]
         for line in text.split(separator: "\n") {

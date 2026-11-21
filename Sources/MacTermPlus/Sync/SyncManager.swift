@@ -169,6 +169,7 @@ final class SyncManager: ObservableObject {
 
     /// Hooks up change notifications and the poller. Call once at launch.
     func attach(store: SessionStore) {
+        guard !Showcase.isOn else { return }   // screenshots must never touch the user's synced data
         self.store = store
         let nc = NotificationCenter.default
         nc.addObserver(forName: SessionStore.changed, object: nil, queue: .main) { [weak self] _ in
@@ -193,7 +194,7 @@ final class SyncManager: ObservableObject {
     }
 
     func scheduleSync(_ delay: Double) {
-        guard enabled else { return }
+        guard enabled, !Showcase.isOn else { return }
         pending?.cancel()
         pending = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
@@ -215,7 +216,7 @@ final class SyncManager: ObservableObject {
     }
 
     func syncNow() async {
-        guard let store, !isSyncing else { return }
+        guard !Showcase.isOn, let store, !isSyncing else { return }
         guard let file = syncFile else { lastError = SyncError.noFolder.errorDescription; return }
         isSyncing = true
         defer { isSyncing = false }

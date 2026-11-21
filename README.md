@@ -1,165 +1,144 @@
+<div align="center">
+
+<img src="docs/images/icon.png" width="128" alt="MacTerm+ icon">
+
 # MacTerm+
 
-**Built by Bairagi.**
+**SSH terminal, SFTP & FTP file manager, tunnels and tools — in one window.**<br>
+A native app for Macs with Apple Silicon. Built by Bairagi.
 
-## Download
+[![Latest release](https://img.shields.io/github/v/release/engsawankumar/MacTermPlus?label=download&color=0a84ff)](https://github.com/engsawankumar/MacTermPlus/releases/latest)
+![macOS 15+](https://img.shields.io/badge/macOS-15%2B-black?logo=apple)
+![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-34c759)
+![Free](https://img.shields.io/badge/price-free-ff9f0a)
 
-Get the latest version from **[Releases](https://github.com/engsawankumar/MacTermPlus/releases/latest)**:
+### [⬇︎ Download MacTerm+](https://github.com/engsawankumar/MacTermPlus/releases/latest)
 
-- **MacTerm+-x.y.z.dmg**: open it and drag **MacTerm+** to **Applications**.
-- **MacTerm+-x.y.z.zip**: unzip and move **MacTerm+** to Applications.
+<img src="docs/images/main.png" alt="MacTerm+ with an SSH terminal, the server's files in the sidebar and live server stats" width="900">
 
-Requires macOS 15 or later on Apple Silicon. The app isn't notarized by Apple yet, so the first time:
-**right-click MacTerm+ → Open → Open**. After that, **MacTerm+ → Check for Updates…** keeps it current.
+</div>
 
-A native macOS (Apple Silicon) SSH terminal and SFTP file manager in one window.
-Open a server and you get a terminal with a live file browser beside it, plus a two-pane
-Mac ↔ server commander with a transfer queue.
+---
+
+## Why MacTerm+
+
+- **One window for your servers.** Open a server and you get a terminal, its files next to it,
+  and live health stats underneath, all over a single secure connection.
+- **Every common protocol:** SSH, SFTP, FTP and FTPS.
+- **Feels at home on the Mac.** Native, fast on Apple Silicon, light and dark mode, Keychain for passwords.
+- **Brings your sessions along.** It finds the sessions you already saved in other SSH/FTP apps and imports them in a few clicks.
+- **Keeps itself up to date.** New versions install from inside the app.
 
 ## Features
 
-- **All-in-one layout**: a big-icon toolbar, a sidebar rail (Sessions / Files / Macros / Tools / Tunnels), Quick connect, a Home tab, numbered tabs, and a welcome box in each SSH terminal.
-- **Protocols**: SSH (terminal + files), SFTP (files only), FTP and FTPS (explicit TLS, or implicit on port 990). FTP uses the libcurl that ships with macOS.
-- **Files**: a sidebar browser for the current tab with **Follow terminal folder**, a two-pane Mac ↔ server view, a transfer queue, drag & drop, folder up/download, `..` row, Open With, and edit-and-save-back. All of this works over SFTP and FTP.
-- **Server info bar** (Remote monitoring): host, OS, CPU with a graph, memory, network, user, disk, uptime and load.
-- **Split view** (2 or 4 terminals) and **MultiExec** (type into all terminals at once).
-- **SSH tunnels** (local port forwarding, auto-start), **Macros** (saved commands, run in one or all terminals), **Tools** (SSH key generator, install your public key on a server, port checker).
-- **Sync across Macs** through iCloud Drive, Google Drive (desktop app), Dropbox, OneDrive or any folder. Sessions, macros and tunnels merge automatically, with a device list. Passwords can optionally sync end-to-end encrypted (PBKDF2 + AES-256-GCM, passphrase never uploaded).
-- **Import**: automatic scan of this Mac for sessions saved by other SSH, SFTP and FTP apps (including Windows apps running in compatibility bottles), Keychain logins and ~/.ssh/config, plus import from common session files and CSV. **Export**: JSON, OpenSSH config or CSV.
-- **Look**: 17 terminal themes, fonts, padding, icon styles (Monochrome / Colorful / Vivid), accent colors, light/dark mode.
-- **Keychain**: export sessions with passwords to Apple's Passwords app (iCloud Keychain) and import them back; import SSH/FTP logins other apps saved in the keychain; direct iCloud Keychain storage on Developer ID builds.
-- **Per-session colors & terminal themes**, with session-colored tabs.
-- **File management**: a full toolbar, permission manager (chmod, recursive, presets), file info with owner/group, recent folders, filter.
-- **Updates**: Check for Updates from GitHub Releases, with daily auto-check and verified in-place install.
-- **Security**: secrets only in the Keychain; host keys are trusted on first use and a changed key is refused.
+| | |
+|---|---|
+| 🖥 **Terminal** | Tabs, split view (2 or 4 terminals), 17 color themes, per-server themes, copy & paste with preview, macros |
+| 📁 **Files** | File browser beside the terminal, two-pane Mac ↔ server view, drag & drop, upload and download whole folders, edit any file in your favorite Mac app |
+| 🔐 **Permissions** | Change file permissions with checkboxes, presets or octal values, for one file or a whole folder |
+| 📊 **Server info** | CPU graph, memory, network speed, disk space, uptime and the server's OS at a glance |
+| 🔀 **Tunnels** | Reach databases and admin pages behind a server through a port on your Mac |
+| ⌨️ **MultiExec** | Type once, run in every open terminal |
+| ⬇️ **Import** | Finds sessions saved by other apps on this Mac (including Windows apps in compatibility layers), plus `~/.ssh/config`, CSV and the Passwords app |
+| ☁️ **Sync** | Keep sessions, macros and tunnels the same on all your Macs with iCloud Drive or Google Drive; passwords optional and end-to-end encrypted |
+| 🎨 **Make it yours** | Colors and OS icons for servers, fonts, padding, icon styles, accent colors |
 
-## Build
+## Screenshots
 
-Requires macOS 15+ on Apple Silicon, with Xcode or just the Command Line Tools (`xcode-select --install`).
+<table>
+<tr>
+<td width="50%"><img src="docs/images/files.png" alt="Two-pane file manager"><br><sub><b>Two-pane files:</b> your Mac on the left, the server on the right.</sub></td>
+<td width="50%"><img src="docs/images/sessions.png" alt="Sessions with OS icons"><br><sub><b>Sessions:</b> folders, colors and the server's OS at a glance.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/welcome.png" alt="Welcome window"><br><sub><b>Welcome:</b> get started in one click.</sub></td>
+<td width="50%"><img src="docs/images/themes.png" alt="Terminal themes"><br><sub><b>Themes:</b> 17 terminal color themes, fonts and more.</sub></td>
+</tr>
+</table>
 
-```bash
-./scripts/build-app.sh        # → dist/MacTerm+.app
-open "dist/MacTerm+.app"
-```
+## Install
 
-During development: `swift build && .build/debug/MacTermPlus`
+1. **Download** `MacTerm+-x.y.z.dmg` from the [latest release](https://github.com/engsawankumar/MacTermPlus/releases/latest).
+2. **Open** the DMG and **drag MacTerm+ to Applications**.
+3. **Open MacTerm+** from Applications or Launchpad.
 
-### Self-tests (no UI)
+**The first time you open it**, macOS may say it can't check MacTerm+ for malicious software, because the
+app isn't distributed through the App Store. To open it anyway:
 
-```bash
-.build/debug/MacTermPlus --selftest HOST PORT USER ~/.ssh/id_ed25519     # SSH shell + SFTP
-.build/debug/MacTermPlus --ftptest HOST PORT USER PASSWORD ftp|ftps [insecure]
-.build/debug/MacTermPlus --scan-test                                     # installed clients
-```
+1. Click **Done** in that message.
+2. Open **System Settings → Privacy & Security**.
+3. Scroll down to the message about MacTerm+ and click **Open Anyway**, then confirm.
 
-### Connection self-test (no UI)
+You only do this once; updates from inside the app open normally.
 
-```bash
-.build/debug/MacTermPlus --selftest <host> <port> <user> <~/.ssh/id_ed25519 | password:SECRET>
-```
+**Requirements:** a Mac with Apple Silicon (M1 or newer) and macOS 15 Sequoia or later.
 
-The self-test checks login, an interactive shell, and SFTP list, upload, download (compared byte-for-byte) and delete. It uses a temporary folder under `/tmp` on the server.
+## Getting started
 
-## Shortcuts
+- **Add a server:** click **Session** (or press ⌘N), enter the host, user name and password or key, then **Save & Connect**.
+- **Import what you have:** press ⇧⌘I. MacTerm+ lists the sessions it found on your Mac; tick the ones you want.
+- **Quick connect:** type `user@host` (or `sftp://…`, `ftp://…`) into the field at the top of the sidebar and press Return.
+- **Learn more:** press ⌘? for the built-in guide, or read the [User guide](docs/USER_GUIDE.md).
 
-| Keys | Action |
+| Shortcut | Action |
 |---|---|
 | ⌘N | New session |
 | ⌘T | New local shell |
+| ⇧⌘I | Import sessions |
 | ⇧⌘W | Close tab |
 | ⇧⌘] / ⇧⌘[ | Next / previous tab |
+| ⌘, | Settings |
+| ⌘? | Help |
 
-## Project layout
+## Updates
 
-```
-Sources/MacTermPlus/
-  App/        app entry, window, tabs, session editor, self-test
-  Models/     saved sessions (JSON) and Keychain storage
-  SSH/        connection handling and host key checking
-  Terminal/   SSH and local terminal views (SwiftTerm)
-  Files/      SFTP/local browsers, transfer queue, file UI
-  Settings/   preferences, terminal themes, Settings window
-  Stats/      server info bar (polling + view)
-  Import/     importers for other apps, exporter, import/export sheets
-  Help/       in-app help (also generates docs/USER_GUIDE.md)
-  Sync/       multi-device sync (cloud folder + encrypted password vault)
-  Tools/      tunnels, macros
-Sources/CCurlShim/  tiny C wrapper around the system libcurl (FTP/FTPS)
-docs/         USER_GUIDE.md
-scripts/      build-app.sh, make-icon.swift, update-notices.sh
-```
+MacTerm+ checks for new versions once a day. You can also choose **MacTerm+ → Check for Updates…** at any time.
+Updates are downloaded from this page, checked against a published checksum and the developer's signature,
+and installed with one click. Your sessions and settings stay as they are.
 
-User data is stored in `~/Library/Application Support/MacTermPlus/` (`sessions.json`, `known_hosts.json`). Secrets are kept only in the Keychain.
+## Privacy & security
 
-## Licensing
+- Passwords and key passphrases are stored only in your **macOS Keychain**.
+- Server identities are remembered on first connect; if a server's key ever changes, MacTerm+ warns you and doesn't connect.
+- Sync only writes to **your own** iCloud Drive or Google Drive folder. Passwords sync only if you turn it on, encrypted with a passphrase that never leaves your Macs.
+- No accounts, no tracking. The app contacts GitHub only to check for updates and Welcome window news.
 
-All of the code is original. The dependencies are permissive: SwiftTerm and Citadel (MIT), and SwiftNIO, swift-nio-ssh and swift-crypto (Apache-2.0). Their notices are in `THIRD_PARTY_NOTICES.md` and are copied into the app bundle. Run `./scripts/update-notices.sh` after changing dependencies.
+## FAQ
 
-## Welcome window messages
+<details>
+<summary><b>macOS asks for my Keychain password after an update</b></summary>
 
-The Welcome window shows messages from [`announcements.json`](announcements.json): edit it on GitHub to
-publish news, tips or sponsored messages without releasing a new version. Format: [docs/ANNOUNCEMENTS.md](docs/ANNOUNCEMENTS.md).
+Choose **Always Allow**. MacTerm+ 1.0.3 and later are signed with a permanent identity, so macOS remembers
+your choice for all future updates.
+</details>
 
-## iCloud Keychain (Developer ID builds)
+<details>
+<summary><b>“keyExchangeNegotiationFailure” or “no encryption method in common”</b></summary>
 
-Writing to iCloud Keychain requires an app signed with an Apple Developer ID and the Keychain Sharing entitlement (a provisioning profile for your bundle ID). With those:
+Some older routers and devices only offer older SSH algorithms. Make sure
+**Settings → Terminal → Connections → Allow older SSH algorithms** is on (it is by default) and update
+to the latest MacTerm+.
+</details>
 
-```bash
-SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" TEAM_ID=TEAMID \
-PROVISIONING_PROFILE=~/Downloads/MacTermPlus.provisionprofile ./scripts/build-app.sh
-```
+<details>
+<summary><b>Can I use an SSH key instead of a password?</b></summary>
 
-Without them, the Passwords-app export/import (Settings → Keychain) gets sessions into iCloud Keychain instead.
+Yes. In the session, choose **Private key** and pick your key (Ed25519 or RSA, OpenSSH format).
+**Tools → Generate Key** creates one, and **Install my public key** adds it to a server.
+</details>
 
-## Code signing (keep permissions across updates)
+<details>
+<summary><b>Does it work on Intel Macs?</b></summary>
 
-Run once on the Mac you release from:
+Not at the moment. MacTerm+ is built for Apple Silicon.
+</details>
 
-```bash
-./scripts/setup-signing.sh
-```
+## Feedback
 
-It creates a permanent signing certificate in its own keychain file (`~/.macterm-signing/`); `build-app.sh`
-then signs every build with it. Because the signature stays the same, macOS keeps users' Keychain
-**Always Allow** choices and folder permissions after updates, and the in-app updater refuses updates
-signed by anyone else. **Back up `~/.macterm-signing/`.** Every future release must be signed with the
-same certificate. `release.sh` won't publish unsigned builds.
+Found a bug or have an idea? [Open an issue](https://github.com/engsawankumar/MacTermPlus/issues). It helps a lot.
 
-## Publishing an update (GitHub Releases)
+## Credits
 
-The app checks `https://github.com/<GITHUB_REPO>/releases/latest` and installs newer versions in place
-(SHA-256 verified). One-time setup:
+**MacTerm+ is built by Bairagi.** It uses a few open-source components; see [Third-party notices](THIRD_PARTY_NOTICES.md).
 
-1. Create the GitHub repository and set `GITHUB_REPO=<you>/MacTermPlus` in `release.config`.
-2. `brew install gh && gh auth login`
-
-For each release:
-
-```bash
-echo 0.5.1 > VERSION                     # bump the version
-# add a "## 0.5.1" section to CHANGELOG.md (shown to users as "What's new")
-./scripts/release.sh                     # builds, zips, checksums, creates the GitHub release
-```
-
-Releases are published from your Mac (they must be signed with your certificate). The GitHub
-workflows compile every push as a check; a tagged build on GitHub won't publish unless the signing
-certificate is added to the repository's secrets.
-
-`./scripts/release.sh --dry-run` builds and packages without publishing.
-
-Users install the first time from the release page (unzip → move to Applications → right-click → Open,
-because the build isn't notarized). After that, **MacTerm+ → Check for Updates…** handles it.
-
-## Distribution
-
-`build-app.sh` signs the app ad-hoc, which is fine on your own Mac. To share it with others, sign it with an Apple Developer ID and notarize it. Without that, Gatekeeper will block the app on other people's Macs.
-
-## Regenerating the user guide
-
-```bash
-swift build && .build/debug/MacTermPlus --export-help docs/USER_GUIDE.md
-```
-
-## Roadmap
-
-Remote/dynamic (SOCKS) tunnels, jump hosts, ssh-agent support, folder sync with a diff preview, X11 forwarding via XQuartz, and RDP/VNC launchers.
+Developers: build, signing and release instructions are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).

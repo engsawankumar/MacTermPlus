@@ -62,7 +62,7 @@ awk -v v="$VERSION" '$0 ~ "^## "v"$" {f=1; next} /^## / {f=0} f' CHANGELOG.md > 
   echo
   echo "---"
   echo "**Install:** download \`$NAME.dmg\`, open it and drag **MacTerm+** to **Applications** (or use \`$NAME.zip\`)."
-  echo "First launch of a build not signed by Apple: right-click the app → **Open** → **Open**."
+  echo "First launch: if macOS says it can't check the app, open **System Settings → Privacy & Security** and click **Open Anyway**."
   echo "Already installed? Use **MacTerm+ → Check for Updates…**"
 } >> "$NOTES"
 

@@ -40,6 +40,11 @@ final class SSHTerminalController: NSObject, ObservableObject, TerminalViewDeleg
     }
 
     func start() {
+        if Showcase.isOn {   // README screenshots: demo output, no connection
+            printBanner()
+            terminalView.feed(text: Showcase.terminalText())
+            return
+        }
         guard !isRunning else { return }
         isRunning = true
         hasEnded = false

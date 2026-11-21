@@ -59,10 +59,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: Updater.showWindow)) { _ in openWindow(id: "update") }
         .onReceive(NotificationCenter.default.publisher(for: AnnouncementCenter.showWindow)) { _ in openWindow(id: "welcome") }
         .task {
-            SyncManager.shared.attach(store: store)
-            TunnelManager.shared.startAutoTunnels(store: store)
-            Updater.shared.checkAtLaunchIfDue()
-            if ProcessInfo.processInfo.environment["MTP_DEMO"] == nil { AnnouncementCenter.shared.checkAtLaunch() }
+            if !Showcase.isOn {
+                SyncManager.shared.attach(store: store)
+                TunnelManager.shared.startAutoTunnels(store: store)
+                Updater.shared.checkAtLaunchIfDue()
+            }
+            if ProcessInfo.processInfo.environment["MTP_DEMO"] == nil && !Showcase.isOn { AnnouncementCenter.shared.checkAtLaunch() }
             DebugHooks.run(workspace: workspace)
         }
     }
