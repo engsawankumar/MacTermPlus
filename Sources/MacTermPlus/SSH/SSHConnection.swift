@@ -44,6 +44,9 @@ final class SSHConnection: ObservableObject {
         state = .connecting
         let profile = self.profile
         let secret = self.secret
+        // Modern algorithms are always preferred; the older ones (DH group 14, RSA host keys,
+        // AES-CTR) are only used when a server offers nothing newer.
+        let legacy = UserDefaults.standard.object(forKey: "ssh.legacyAlgorithms") as? Bool ?? true
         let task = Task<SSHClient, Error> {
             let auth = try Self.authMethod(for: profile, secret: secret)
             return try await SSHClient.connect(
@@ -52,6 +55,7 @@ final class SSHConnection: ObservableObject {
                 authenticationMethod: auth,
                 hostKeyValidator: .custom(TOFUHostKeyDelegate(host: profile.host, port: profile.port)),
                 reconnect: .never,
+                algorithms: legacy ? .all : SSHAlgorithms(),
                 connectTimeout: .seconds(15)
             )
         }
@@ -122,6 +126,12 @@ final class SSHConnection: ObservableObject {
         if let e = error as? LocalizedError, let d = e.errorDescription { return d }
         let text = String(describing: error)
         if text.contains("allAuthenticationOptionsFailed") { return "Authentication failed — check username, password or key." }
+        if text.contains("keyExchangeNegotiationFailure") {
+            let legacy = UserDefaults.standard.object(forKey: "ssh.legacyAlgorithms") as? Bool ?? true
+            return legacy
+                ? "The server only offers encryption methods MacTerm+ doesn’t support yet (common on very old routers and devices). If you can, update the server’s SSH software or enable modern algorithms (curve25519 / ecdh, ed25519 or rsa-sha2 host keys)."
+                : "The server only offers older encryption methods. Turn on Settings → Terminal → “Allow older SSH algorithms”, then reconnect."
+        }
         if text.contains("connectTimeout") || text.contains("timeout") { return "Connection timed out." }
         if text.contains("connectionRefused") || text.contains("Connection refused") { return "Connection refused — is SSH running on that port?" }
         return text

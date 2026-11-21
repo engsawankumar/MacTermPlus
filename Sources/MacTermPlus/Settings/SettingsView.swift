@@ -131,6 +131,13 @@ private struct TerminalSettings: View {
             Section("Keyboard") {
                 Toggle("Use Option as Meta key", isOn: $settings.optionAsMeta)
                 Toggle("Preview and confirm before pasting several lines", isOn: $settings.confirmMultilinePaste)
+            }
+            Section("Connections") {
+                Toggle("Allow older SSH algorithms for older servers", isOn: Binding(
+                    get: { UserDefaults.standard.object(forKey: "ssh.legacyAlgorithms") as? Bool ?? true },
+                    set: { UserDefaults.standard.set($0, forKey: "ssh.legacyAlgorithms") }))
+                Text("Lets MacTerm+ connect to routers, NAS boxes and older Linux that only offer Diffie-Hellman group 14, RSA (ssh-rsa) host keys or AES-CTR. Modern algorithms are always tried first.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Text("Turn this off if you type special characters with Option (e.g. @ or € on some keyboards).")
                     .font(.caption).foregroundStyle(.secondary)
             }

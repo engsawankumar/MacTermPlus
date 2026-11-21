@@ -3,6 +3,12 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.4
+- Connects to older SSH servers (routers, NAS boxes, older Linux) that only offer Diffie-Hellman group 14,
+  RSA (ssh-rsa) host keys or AES-CTR. Fixes “keyExchangeNegotiationFailure”. Modern algorithms are still preferred.
+- New setting: Settings → Terminal → Connections → “Allow older SSH algorithms”.
+- Clearer message when a server and MacTerm+ have no encryption method in common.
+
 ## 1.0.3
 - MacTerm+ is now signed with a permanent developer identity. After this update macOS asks for
   Keychain and folder access **one last time**: choose **Always Allow** and future updates keep it.
