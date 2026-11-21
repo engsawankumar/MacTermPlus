@@ -298,6 +298,8 @@ enum DebugHooks {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .showHelp, object: nil) }
         } else if env["MTP_OPEN"] == "settings" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .showSettings, object: nil) }
+        } else if env["MTP_OPEN"] == "welcome" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: AnnouncementCenter.showWindow, object: nil) }
         } else if env["MTP_OPEN"] == "import" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NotificationCenter.default.post(name: .importSessions, object: nil) }
         }

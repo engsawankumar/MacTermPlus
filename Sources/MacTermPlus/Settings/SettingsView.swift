@@ -60,6 +60,9 @@ private struct GeneralSettings: View {
             }
             Section("Tabs") {
                 Toggle("Ask before closing a connected tab", isOn: $settings.confirmCloseTab)
+                Toggle("Show the Welcome window when MacTerm+ opens", isOn: Binding(
+                    get: { AnnouncementCenter.shared.showAtLaunch },
+                    set: { AnnouncementCenter.shared.showAtLaunch = $0 }))
             }
             Section("Updates") {
                 UpdateSettingsRows()

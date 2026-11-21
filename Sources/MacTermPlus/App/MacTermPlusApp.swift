@@ -37,6 +37,11 @@ struct MacTermPlusApp: App {
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
 
+        Window("Welcome to MacTerm+", id: "welcome") {
+            WelcomeWindowView()
+        }
+        .windowResizability(.contentSize)
+
         Window("Software Update", id: "update") {
             UpdateView()
         }
@@ -95,6 +100,7 @@ private struct HelpMenuItems: View {
     var body: some View {
         Button("MacTerm+ Help") { openWindow(id: "help") }
             .keyboardShortcut("?", modifiers: .command)
+        Button("Welcome to MacTerm+") { openWindow(id: "welcome") }
         Button("Keyboard Shortcuts") { openWindow(id: "help") }
         Divider()
         Button("Show Data Folder") { NSWorkspace.shared.activateFileViewerSelecting([AppPaths.supportDirectory]) }

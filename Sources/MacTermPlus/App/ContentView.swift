@@ -57,10 +57,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showHelp)) { _ in openWindow(id: "help") }
         .onReceive(NotificationCenter.default.publisher(for: .showSettings)) { _ in openSettings() }
         .onReceive(NotificationCenter.default.publisher(for: Updater.showWindow)) { _ in openWindow(id: "update") }
+        .onReceive(NotificationCenter.default.publisher(for: AnnouncementCenter.showWindow)) { _ in openWindow(id: "welcome") }
         .task {
             SyncManager.shared.attach(store: store)
             TunnelManager.shared.startAutoTunnels(store: store)
             Updater.shared.checkAtLaunchIfDue()
+            if ProcessInfo.processInfo.environment["MTP_DEMO"] == nil { AnnouncementCenter.shared.checkAtLaunch() }
             DebugHooks.run(workspace: workspace)
         }
     }

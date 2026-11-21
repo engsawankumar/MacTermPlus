@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "messages": [
+    {
+      "id": "welcome-1.0",
+      "title": "Thanks for trying MacTerm+",
+      "body": "SSH, SFTP, FTP and FTPS in one window, with tunnels, macros and sync across your Macs. Updates arrive through **MacTerm+ → Check for Updates**.",
+      "style": "news",
+      "buttonTitle": "See what's new",
+      "buttonURL": "https://github.com/engsawankumar/MacTermPlus/releases/latest",
+      "priority": 10
+    },
+    {
+      "id": "example-sponsored",
+      "title": "Your message here",
+      "body": "Example of a sponsored message. It never shows because its end date has passed. Copy it, give it a new id, set dates, and change style/text/image/button.",
+      "style": "ad",
+      "imageURL": "https://example.com/banner.png",
+      "buttonTitle": "Visit sponsor",
+      "buttonURL": "https://example.com",
+      "start": "2020-01-01",
+      "end": "2020-01-02",
+      "priority": 5
+    }
+  ]
+}
