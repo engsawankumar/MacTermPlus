@@ -3,6 +3,12 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.7
+- Unticking **“Show this window when MacTerm+ opens”** now really keeps the Welcome window closed,
+  also after updates.
+- Clearer explanation of Keychain permission: with all passwords in one item, macOS asks **once per update**.
+  For no prompts at all, use the MacTerm+ encrypted vault (Settings → Passwords).
+
 ## 1.0.6
 - **No more repeated Keychain prompts.** All MacTerm+ passwords now live in one Keychain item that
   MacTerm+ itself owns, so macOS no longer asks at launch or after updates. On the first launch of

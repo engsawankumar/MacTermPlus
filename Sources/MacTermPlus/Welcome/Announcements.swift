@@ -136,7 +136,8 @@ final class AnnouncementCenter: ObservableObject {
         Task {
             await refresh()
             let unseen = messages.contains { !seen.contains($0.id) }
-            if newVersion || (showAtLaunch && unseen) {
+            // Unticking "Show this window when MacTerm+ opens" is final: no auto-open after updates either.
+            if showAtLaunch && (newVersion || unseen) {
                 NotificationCenter.default.post(name: Self.showWindow, object: nil)
             }
         }

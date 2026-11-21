@@ -116,6 +116,18 @@ enum SelfTest {
             while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
             exit(0)
         }
+        if args.contains("--keychain-noprompt-check") {
+            // Reads the real passwords item but forbids any dialog: succeeds only if macOS would NOT prompt.
+            // Prints counts only, never passwords.
+            var r: AnyObject?
+            let st = SecItemCopyMatching([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.macterm-plus.secrets",
+                                          kSecAttrAccount as String: "all", kSecReturnData as String: true,
+                                          kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail] as CFDictionary, &r)
+            let n = (r as? Data).flatMap { try? JSONDecoder().decode([String: String].self, from: $0) }?.count ?? 0
+            print(st == errSecSuccess ? "NO PROMPT NEEDED — read \(n) saved passwords silently"
+                                      : "WOULD PROMPT (status \(st): \(SecCopyErrorMessageString(st, nil) as String? ?? ""))")
+            exit(0)
+        }
         if args.contains("--keychain-bundle-test") {
             // Run with MTP_KEYCHAIN_PREFIX=com.macterm-plus-test so real items are never touched.
             let prefix = ProcessInfo.processInfo.environment["MTP_KEYCHAIN_PREFIX"] ?? ""

@@ -109,8 +109,10 @@ and installed with one click. Your sessions and settings stay as they are.
 <details>
 <summary><b>macOS asks for my Keychain password after an update</b></summary>
 
-Update to 1.0.6 or later and choose **Always Allow** one last time if asked. From 1.0.6, all passwords live in
-one Keychain item that belongs to MacTerm+, so macOS stops asking, including after updates. Prefer no Keychain prompts at all? Switch to the **MacTerm+ encrypted vault**
+Choose **Always Allow**. Since 1.0.6 all passwords live in **one** Keychain item, so you're asked **once per
+update** (not once per password), and not at all between updates. macOS re-confirms after each update because
+MacTerm+ isn't signed with a paid Apple developer ID. For no macOS prompts at all, switch to the
+**MacTerm+ encrypted vault** in Settings → Passwords (you type one master password when MacTerm+ opens). Prefer no Keychain prompts at all? Switch to the **MacTerm+ encrypted vault**
 in Settings → Passwords.
 </details>
 
