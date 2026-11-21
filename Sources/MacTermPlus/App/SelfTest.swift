@@ -116,6 +116,37 @@ enum SelfTest {
             while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
             exit(0)
         }
+        if args.contains("--keychain-bundle-test") {
+            // Run with MTP_KEYCHAIN_PREFIX=com.macterm-plus-test so real items are never touched.
+            let prefix = ProcessInfo.processInfo.environment["MTP_KEYCHAIN_PREFIX"] ?? ""
+            guard prefix.hasSuffix("-test") else { print("refusing: set MTP_KEYCHAIN_PREFIX=…-test"); exit(1) }
+            func check(_ ok: Bool, _ what: String) { print((ok ? "✓ " : "✗ ") + what); if !ok { exit(1) } }
+            func legacyCount() -> Int {
+                var r: AnyObject?
+                let st = SecItemCopyMatching([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: prefix + ".session",
+                                              kSecReturnAttributes as String: true, kSecMatchLimit as String: kSecMatchLimitAll] as CFDictionary, &r)
+                return st == errSecSuccess ? ((r as? [[String: Any]])?.count ?? 0) : 0
+            }
+            // Old-style items, one per password (what versions up to 1.0.5 created).
+            for (a, p) in [("acct-1", "one"), ("acct-2", "twö"), ("sync-passphrase", "phrase")] {
+                SecItemAdd([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: prefix + ".session",
+                            kSecAttrAccount as String: a, kSecValueData as String: Data(p.utf8)] as CFDictionary, nil)
+            }
+            Keychain.storage = .keychain
+            check(legacyCount() == 3, "3 old per-password items before")
+            check(Keychain.read(account: "acct-2") == "twö", "first read returns the right password")
+            check(legacyCount() == 0, "old items moved and removed after one read")
+            check(Keychain.read(account: "acct-1") == "one" && Keychain.read(account: "sync-passphrase") == "phrase", "all passwords in the single item")
+            Keychain.save("new", account: "acct-3"); Keychain.delete(account: "acct-1")
+            var r: AnyObject?
+            SecItemCopyMatching([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: prefix + ".secrets",
+                                 kSecAttrAccount as String: "all", kSecReturnData as String: true] as CFDictionary, &r)
+            let stored = (r as? Data).flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
+            check(stored == ["acct-2": "twö", "acct-3": "new", "sync-passphrase": "phrase"], "save/delete persisted in one item: \(stored.keys.sorted())")
+            SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: prefix + ".secrets"] as CFDictionary)
+            print("BUNDLETEST PASS")
+            exit(0)
+        }
         if args.contains("--vault-test") {
             // Tests (use MTP_DATA_DIR): vault create/save/read/lock/unlock/change, and moving secrets to and from the Keychain.
             let v = PasswordVault.shared

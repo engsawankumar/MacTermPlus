@@ -3,6 +3,11 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.0.6
+- **No more repeated Keychain prompts.** All MacTerm+ passwords now live in one Keychain item that
+  MacTerm+ itself owns, so macOS no longer asks at launch or after updates. On the first launch of
+  1.0.6, macOS may ask one final time while your existing passwords are moved over. Choose **Always Allow**.
+
 ## 1.0.5
 - **Choose where passwords are saved** (Settings → Passwords): the macOS Keychain, or a new
   **MacTerm+ encrypted vault** unlocked with one master password per launch, with no Keychain prompts.

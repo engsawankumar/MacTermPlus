@@ -22,7 +22,7 @@ struct PasswordStorageSection: View {
             }
             .pickerStyle(.radioGroup)
             Text(storage == .keychain
-                 ? "Passwords live in the macOS Keychain. macOS may ask once per password whether MacTerm+ can use it."
+                 ? "Passwords live in the macOS Keychain, in a single item that belongs to MacTerm+, so macOS doesn’t ask for permission."
                  : "Passwords live in an encrypted file only MacTerm+ reads (AES-256). You type your master password once each time MacTerm+ opens; there are no Keychain prompts. If you forget it, the saved passwords can’t be recovered.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if storage == .vault {

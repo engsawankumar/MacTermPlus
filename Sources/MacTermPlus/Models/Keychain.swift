@@ -38,44 +38,120 @@ enum Keychain {
     private static var syncing: Bool { useICloud && iCloudAvailable }
 
     // MARK: Secrets
+    //
+    // All MacTerm+ passwords live in ONE Keychain item (a small encrypted-by-macOS dictionary) created by
+    // the app itself. macOS trusts the app that created an item, and MacTerm+ keeps the same signature
+    // across updates, so reading it never shows a prompt. It is read once per launch and cached.
+    // Older versions stored one item per password; those are moved in once (see migrateLegacyItems).
 
-    private static func keychainSave(_ secret: String, account: String) {
-        // Remove every older copy (local or iCloud) so there is exactly one.
-        keychainDelete(account: account)
-        var add: [String: Any] = [
+    /// Tests use separate names so they never touch real passwords.
+    private static var prefix: String { ProcessInfo.processInfo.environment["MTP_KEYCHAIN_PREFIX"] ?? "com.macterm-plus" }
+    private static var legacyService: String { prefix + ".session" }
+    private static var bundleService: String { prefix + ".secrets" }
+    private static let bundleAccount = "all"
+
+    private static let lock = NSLock()
+    private static var cache: [String: String]?
+
+    private static func loadBundle() -> [String: String] {
+        if let cache { return cache }
+        var result: AnyObject?
+        let status = SecItemCopyMatching([
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecAttrLabel as String: "MacTerm+ session",
-            kSecValueData as String: Data(secret.utf8),
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
-        ]
-        if syncing { add[kSecAttrSynchronizable as String] = true }
-        SecItemAdd(add as CFDictionary, nil)
+            kSecAttrService as String: bundleService,
+            kSecAttrAccount as String: bundleAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ] as CFDictionary, &result)
+        var dict: [String: String] = [:]
+        if status == errSecSuccess, let data = result as? Data,
+           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+            dict = decoded
+        }
+        cache = dict
+        if migrateLegacyItems(into: &dict) { cache = dict; writeBundle(dict) }
+        return dict
     }
 
-    private static func keychainRead(account: String) -> String? {
+    private static func writeBundle(_ dict: [String: String]) {
+        guard let data = try? JSONEncoder().encode(dict) else { return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: bundleService,
+            kSecAttrAccount as String: bundleAccount,
+        ]
+        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = query
+            add[kSecValueData as String] = data
+            add[kSecAttrLabel as String] = "MacTerm+ passwords"
+            add[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
+            SecItemAdd(add as CFDictionary, nil)
+        }
+    }
+
+    /// One-time move of the per-password items older versions created. Returns true if anything moved.
+    private static func migrateLegacyItems(into dict: inout [String: String]) -> Bool {
+        var found: AnyObject?
+        guard SecItemCopyMatching([
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: legacyService,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ] as CFDictionary, &found) == errSecSuccess, let items = found as? [[String: Any]] else { return false }
+        var moved = false
+        for item in items {
+            guard let account = item[kSecAttrAccount as String] as? String else { continue }
+            if dict[account] == nil, let secret = legacyRead(account: account) { dict[account] = secret }
+            legacyDelete(account: account)
+            moved = true
+        }
+        return moved
+    }
+
+    private static func legacyRead(account: String) -> String? {
+        var result: AnyObject?
+        guard SecItemCopyMatching([
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: legacyService,
             kSecAttrAccount as String: account,
             kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
+        ] as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
-    private static func keychainDelete(account: String) {
+    private static func legacyDelete(account: String) {
         SecItemDelete([
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: legacyService,
             kSecAttrAccount as String: account,
             kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ] as CFDictionary)
+    }
+
+    private static func keychainSave(_ secret: String, account: String) {
+        lock.lock(); defer { lock.unlock() }
+        var dict = loadBundle()
+        guard dict[account] != secret else { return }
+        dict[account] = secret
+        cache = dict
+        writeBundle(dict)
+    }
+
+    private static func keychainRead(account: String) -> String? {
+        lock.lock(); defer { lock.unlock() }
+        return loadBundle()[account]
+    }
+
+    private static func keychainDelete(account: String) {
+        lock.lock(); defer { lock.unlock() }
+        var dict = loadBundle()
+        guard dict.removeValue(forKey: account) != nil else { return }
+        cache = dict
+        writeBundle(dict)
     }
 
     /// Re-saves every session secret, so they move to (or out of) iCloud Keychain after the setting changes.
