@@ -13,7 +13,7 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 ![Free](https://img.shields.io/badge/price-free-ff9f0a)
 [![License: non-commercial](https://img.shields.io/badge/license-non--commercial-red)](LICENSE)
 
-### [⬇︎ Download MacTerm+](https://github.com/engsawankumar/MacTermPlus/releases/latest)
+### [⬇︎ Download MacTerm+](https://github.com/engsawankumar/MacTermPlus/releases/latest) · [📖 Wiki & user guide](https://github.com/engsawankumar/MacTermPlus/wiki)
 
 <img src="docs/images/main.png" alt="MacTerm+ with an SSH terminal, the server's files in the sidebar and live server stats" width="900">
 
@@ -120,8 +120,7 @@ and installed with one click. Your sessions and settings stay as they are.
 Choose **Always Allow**. Since 1.0.6 all passwords live in **one** Keychain item, so you're asked **once per
 update** (not once per password), and not at all between updates. macOS re-confirms after each update because
 MacTerm+ isn't signed with a paid Apple developer ID. For no macOS prompts at all, switch to the
-**MacTerm+ encrypted vault** in Settings → Passwords (you type one master password when MacTerm+ opens). Prefer no Keychain prompts at all? Switch to the **MacTerm+ encrypted vault**
-in Settings → Passwords.
+**MacTerm+ encrypted vault** in Settings → Passwords (you type one master password when MacTerm+ opens).
 </details>
 
 <details>
