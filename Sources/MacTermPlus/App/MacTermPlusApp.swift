@@ -58,6 +58,11 @@ struct MacTermPlusApp: App {
         }
         .windowResizability(.contentSize)
 
+        Window("License & Terms", id: "terms") {
+            TermsWindow()
+        }
+        .windowResizability(.contentSize)
+
         Window("MacTerm+ Help", id: "help") {
             HelpView()
         }
@@ -128,6 +133,8 @@ private struct HelpMenuItems: View {
         Button("Keyboard Shortcuts") { openWindow(id: "help") }
         Divider()
         Button("Show Data Folder") { NSWorkspace.shared.activateFileViewerSelecting([AppPaths.supportDirectory]) }
+        Button("License & Terms of Use") { openWindow(id: "terms") }
+        Button("Report a Copyright Concern or Complaint…") { NSWorkspace.shared.open(Terms.issuesURL) }
         Button("Third-Party Licenses") {
             if let url = Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "md") {
                 NSWorkspace.shared.open(url)

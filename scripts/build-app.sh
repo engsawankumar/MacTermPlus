@@ -21,6 +21,7 @@ if [ ! -f Resources/AppIcon.icns ]; then
 fi
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
+cp LICENSE "$APP/Contents/Resources/LICENSE.txt"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

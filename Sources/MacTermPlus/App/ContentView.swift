@@ -14,6 +14,7 @@ struct ContentView: View {
     @ViewState private var panel: SidebarPanel = .sessions
     @ViewState private var showSidebar = true
     @ViewState private var showUnlock = false
+    @ViewState private var showTerms = false
     @ViewState private var pendingConnect: SessionProfile?
 
     var body: some View {
@@ -62,6 +63,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showExport) { ExportSessionsView().environmentObject(store) }
+        .sheet(isPresented: $showTerms, onDismiss: afterTerms) { TermsSheet() }
         .onChange(of: connectTarget) { _, target in
             guard let target else { return }
             connectTarget = nil
@@ -82,15 +84,25 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: Updater.showWindow)) { _ in openWindow(id: "update") }
         .onReceive(NotificationCenter.default.publisher(for: AnnouncementCenter.showWindow)) { _ in openWindow(id: "welcome") }
         .task {
-            if Keychain.vaultLocked && !Showcase.isOn { showUnlock = true }
+            if !Terms.isAccepted { showTerms = true }
+            else if Keychain.vaultLocked && !Showcase.isOn { showUnlock = true }
             if !Showcase.isOn {
                 SyncManager.shared.attach(store: store)
                 TunnelManager.shared.startAutoTunnels(store: store)
                 Updater.shared.checkAtLaunchIfDue()
             }
-            if ProcessInfo.processInfo.environment["MTP_DEMO"] == nil && !Showcase.isOn { AnnouncementCenter.shared.checkAtLaunch() }
+            if ProcessInfo.processInfo.environment["MTP_DEMO"] == nil && !Showcase.isOn && Terms.isAccepted { AnnouncementCenter.shared.checkAtLaunch() }
             DebugHooks.run(workspace: workspace)
         }
+    }
+
+    /// After the first-launch agreement: unlock the vault if needed, then show news.
+    private func afterTerms() {
+        guard !Terms.quitting else { return }
+        // Closed without accepting (only "Quit" or "Accept" should close it): ask again.
+        guard Terms.isAccepted else { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showTerms = true }; return }
+        if Keychain.vaultLocked { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showUnlock = true } }
+        AnnouncementCenter.shared.checkAtLaunch()
     }
 
     private func connect(_ profile: SessionProfile) {

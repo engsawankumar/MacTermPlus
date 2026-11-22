@@ -495,6 +495,9 @@ enum DebugHooks {
             if let p = Showcase.sessions().first { workspace.open(p, secret: nil) }
         }
         if env["MTP_QUICK"] == "1" { AppSettings.shared.showQuickCommands = true }
+        if env["MTP_TERMS_QUIT"] == "1" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { NotificationCenter.default.post(name: TermsSheet.testQuit, object: nil) }
+        }
         if env["MTP_DETAILS"] == "1" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { workspace.inspectedID = workspace.selected?.profile?.id }
         }
@@ -504,8 +507,11 @@ enum DebugHooks {
         if let out = env["MTP_SNAPSHOT"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + (Double(env["MTP_DELAY"] ?? "") ?? 4)) {
                 let wantTitle = env["MTP_WINDOW"]
+                if env["MTP_SNAPDEBUG"] != nil {
+                    for w in NSApp.windows { print("WIN title=\(w.title) visible=\(w.isVisible) sheet=\(w.isSheet) w=\(w.frame.width) attached=\(w.attachedSheet != nil) super=\(w.contentView?.superview != nil)") }
+                }
                 guard let window = NSApp.windows.first(where: { w in
-                          w.isVisible && w.frame.width > 300 && (wantTitle == nil || w.title.contains(wantTitle!))
+                          w.isVisible && !w.isSheet && w.frame.width > 300 && (wantTitle == nil || w.title.contains(wantTitle!))
                       }) ?? NSApp.keyWindow,
                       let view = (env["MTP_SHEET"] == "1" ? (window.attachedSheet ?? window) : window).contentView?.superview,
                       let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }

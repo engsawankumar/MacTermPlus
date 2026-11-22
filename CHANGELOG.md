@@ -3,6 +3,12 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.3.1
+- **License & terms on first launch**: MacTerm+ now shows its license and terms of use once (and again only if
+  they change). Tick “I have read and accept…” and click Accept & Continue to start, or Quit.
+- **Help → License & Terms of Use** shows the terms, the full license and when you accepted them;
+  **Help → Report a Copyright Concern or Complaint…** opens the project's complaint form.
+
 ## 1.3.0
 - **Host Details panel**: click ⓘ on a session (or ⌘I) to edit it on the right side while you work: address,
   name, folder, tags, color, theme, protocol, port, login (or identity), password with Touch ID reveal, start folder,

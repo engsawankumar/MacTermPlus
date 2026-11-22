@@ -23,7 +23,7 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 > **Free for personal and non-commercial use only.** Commercial use is not allowed without written permission.
 > MacTerm+ is provided as is, without warranty. **By downloading or using it you accept the [license](LICENSE)
 > and agree that you, the user, are solely responsible for how you use it.** Read the
-> [terms of use](#license-terms-of-use-and-disclaimer) before you start.
+> [terms of use](#license-terms-of-use-and-disclaimer) before you start; the app asks you to accept them on first launch.
 
 ---
 
