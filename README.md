@@ -11,12 +11,19 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 ![macOS 15+](https://img.shields.io/badge/macOS-15%2B-black?logo=apple)
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-34c759)
 ![Free](https://img.shields.io/badge/price-free-ff9f0a)
+[![License: non-commercial](https://img.shields.io/badge/license-non--commercial-red)](LICENSE)
 
 ### [⬇︎ Download MacTerm+](https://github.com/engsawankumar/MacTermPlus/releases/latest)
 
 <img src="docs/images/main.png" alt="MacTerm+ with an SSH terminal, the server's files in the sidebar and live server stats" width="900">
 
 </div>
+
+> [!CAUTION]
+> **Free for personal and non-commercial use only.** Commercial use is not allowed without written permission.
+> MacTerm+ is provided as is, without warranty. **By downloading or using it you accept the [license](LICENSE)
+> and agree that you, the user, are solely responsible for how you use it.** Read the
+> [terms of use](#license-terms-of-use-and-disclaimer) before you start.
 
 ---
 
@@ -141,6 +148,36 @@ Not at the moment. MacTerm+ is built for Apple Silicon.
 ## Feedback
 
 Found a bug or have an idea? [Open an issue](https://github.com/engsawankumar/MacTermPlus/issues). It helps a lot.
+
+## License, terms of use and disclaimer
+
+MacTerm+ is **source-available**: you can read, learn from and improve the code, but it is licensed for
+**non-commercial use only**. The full terms are in [LICENSE](LICENSE).
+
+**✅ You may** use, copy and modify MacTerm+ for personal use, learning, research, teaching and non-profit work,
+and share it with the license and the "Built by Bairagi" credit kept intact.
+
+**❌ You may not**, without written permission, sell it, include it or its code in paid products, services or
+client projects, offer it under a paid or ad-supported plan, or remove the credit or license.
+
+**⚠️ Use responsibly.** Use MacTerm+ only on servers, networks and accounts that you own or are authorized to
+access, and follow the laws that apply to you.
+
+**🛡️ No warranty and no liability.** MacTerm+ is provided **"as is"**, without any warranty. The developer is
+**not liable** for any unethical, unauthorized or illegal use of this software by anyone, or for any data loss,
+downtime, security incident or other damage that results from using it.
+
+**🤝 Your consent.** By downloading, installing or using MacTerm+, you confirm that you have read and accept
+the [license](LICENSE), and you agree that **all responsibility and liability for its use lies with you, the
+user, and not with the developer**. If you do not agree, do not download or use MacTerm+.
+
+**📩 Copyright, complaints and commercial use.** If you believe something in MacTerm+ infringes your copyright
+or other rights, have any complaint, or want to use it commercially, please
+[open an issue](https://github.com/engsawankumar/MacTermPlus/issues/new/choose). Reports are reviewed
+promptly, and anything found to infringe will be removed or changed.
+
+Third-party components keep their own open-source licenses (MIT and Apache-2.0); see
+[Third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Credits
 

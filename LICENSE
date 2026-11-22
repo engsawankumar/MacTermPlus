@@ -1,0 +1,82 @@
+MacTerm+ Non-Commercial License
+Version 1.0
+
+Copyright (c) 2026 Bairagi. All rights reserved except as granted below.
+
+MacTerm+ (the "Software") is source-available: its source code is published so people can read,
+learn from and improve it. It is NOT licensed for commercial use.
+
+1. PERMITTED USE
+
+   You may, free of charge, download, install, run, read, copy and modify the Software, and share
+   unmodified or modified copies, only for NON-COMMERCIAL purposes, such as personal use,
+   learning, research, teaching, and use by non-profit organizations.
+
+   Every copy or modified version you share must include this LICENSE file unchanged, keep the
+   copyright notice and the "Built by Bairagi" credit, and say clearly that it was changed if it was.
+
+2. COMMERCIAL USE IS NOT ALLOWED
+
+   Without prior written permission from the copyright holder, you may not:
+   a) sell, rent, lease or sublicense the Software or any modified version of it;
+   b) include the Software, or any part of its source code, in a product, service or project that
+      is sold, paid for, or used to earn money, including client work and paid support;
+   c) offer the Software, or a service built on it, under a subscription, paid plan or advertising
+      model;
+   d) remove or change the copyright notice, the credit, or this license.
+
+   To ask for commercial permission, contact the copyright holder (see section 8).
+
+3. THIRD-PARTY COMPONENTS
+
+   The Software includes open-source components that remain under their own licenses (MIT and
+   Apache-2.0). Those licenses, listed in THIRD_PARTY_NOTICES.md, apply to those components and
+   are not changed by this license.
+
+4. ACCEPTABLE USE AND USER RESPONSIBILITY
+
+   You may use the Software only on computers, servers, networks and accounts that you own or
+   are explicitly authorized to access. You must follow all laws and rules that apply to you.
+
+   YOU ALONE ARE RESPONSIBLE FOR HOW YOU USE THE SOFTWARE. The copyright holder does not
+   control, monitor or approve what users do with it and is not responsible for any unethical,
+   unauthorized, harmful or illegal use of it by anyone.
+
+5. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+   BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, SECURITY,
+   ACCURACY AND NON-INFRINGEMENT. YOU USE IT ENTIRELY AT YOUR OWN RISK.
+
+6. LIMITATION OF LIABILITY
+
+   TO THE MAXIMUM EXTENT ALLOWED BY LAW, IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+   LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE, INCLUDING BUT NOT LIMITED TO
+   LOSS OF DATA, SERVER DAMAGE OR DOWNTIME, SECURITY INCIDENTS, LOST PROFITS, OR ANY DIRECT,
+   INDIRECT, INCIDENTAL, SPECIAL OR CONSEQUENTIAL DAMAGES.
+
+7. YOUR AGREEMENT
+
+   By downloading, installing, copying or using the Software, you confirm that you have read and
+   accept this license, and you agree that all responsibility and liability for your use of the
+   Software rests with you, the user, and not with the developer or contributors. You agree to
+   hold the copyright holder harmless from claims that result from your use or misuse of the
+   Software or from your breach of this license.
+
+   If you do not agree, do not download, install or use the Software.
+
+8. CONTACT, COPYRIGHT AND COMPLAINTS
+
+   For commercial permission, copyright concerns (including takedown requests), or any complaint,
+   open an issue at:
+
+       https://github.com/engsawankumar/MacTermPlus/issues
+
+   Copyright and complaint reports are reviewed promptly, and content found to infringe the rights
+   of others will be removed or changed.
+
+9. TERMINATION
+
+   Any breach of this license ends your permission to use the Software automatically. You must then
+   stop using it and delete your copies.
