@@ -48,7 +48,7 @@ A native app for Macs with Apple Silicon. Built by Bairagi.
 | 🔀 **Tunnels** | Reach databases and admin pages behind a server through a port on your Mac |
 | ⌨️ **MultiExec** | Type once, run in every open terminal |
 | ⬇️ **Import** | Finds sessions saved by other apps on this Mac (including Windows apps in compatibility layers), plus `~/.ssh/config`, CSV and the Passwords app |
-| ☁️ **Sync** | Keep sessions, settings, macros, quick commands and tunnels the same on all your Macs with iCloud Drive or Google Drive, set up in three steps; passwords optional and end-to-end encrypted |
+| ☁️ **Sync** | Keep sessions, settings, macros, quick commands and tunnels the same on all your Macs with iCloud Drive or Google Drive, set up in three steps; optionally **fully encrypted** so your cloud drive holds nothing readable |
 | 🎨 **Make it yours** | Colors and OS icons for servers, fonts, padding, icon styles, accent colors |
 
 ## Screenshots
@@ -109,7 +109,7 @@ and installed with one click. Your sessions and settings stay as they are.
 - Passwords stay on your Mac: in the **macOS Keychain**, or in an optional **MacTerm+ encrypted vault** unlocked with one master password (Settings → Passwords).
 - Updates and Welcome news are **download-only**: MacTerm+ never sends your sessions, server names or passwords anywhere.
 - Server identities are remembered on first connect; if a server's key ever changes, MacTerm+ warns you and doesn't connect.
-- Sync only writes to **your own** iCloud Drive or Google Drive folder. Passwords sync only if you turn it on, encrypted with a passphrase that never leaves your Macs.
+- Sync only writes to **your own** iCloud Drive or Google Drive folder, and can encrypt everything in it with your passphrase. Passwords sync only if you turn it on, encrypted with a passphrase that never leaves your Macs.
 - No accounts, no tracking. The app contacts GitHub only to check for updates and, if you leave it on, Welcome window news.
 
 ## FAQ

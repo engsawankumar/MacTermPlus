@@ -101,6 +101,8 @@ enum SelfTest {
                 m.attach(store: store)
                 for a in args where a.hasPrefix("theme:") { AppSettings.shared.themeID = String(a.dropFirst(6)) }
                 for a in args where a.hasPrefix("pass:") { m.passphrase = String(a.dropFirst(5)); m.syncPasswords = true }
+                if args.contains("encrypt") { m.encryptAll = true }
+                if args.contains("noencrypt") { m.encryptAll = false }
                 for a in args where a.hasPrefix("ident:") {
                     let f = a.dropFirst(6).split(separator: ":").map(String.init)   // name:user:password
                     if f.count == 3 {
@@ -112,6 +114,7 @@ enum SelfTest {
                 m.enabled = true
                 await m.syncNow()
                 for i in IdentityStore.shared.identities { print("IDENT \(i.name) user=\(i.username) pw=\(Keychain.read(account: i.account) ?? "-")") }
+                print("ENCRYPT \(m.encryptAll)\(m.notice.map { " NOTICE: " + $0 } ?? "")")
                 print("SYNC \(m.lastError ?? "ok") | \(m.lastSummary) | sessions=\(store.sessions.map(\.name).sorted().joined(separator: ",")) | theme=\(AppSettings.shared.themeID)")
                 done.signal()
             }

@@ -18,6 +18,7 @@ struct SyncSetupView: View {
     @ViewState private var settings = true
     @ViewState private var macros = true
     @ViewState private var tunnels = true
+    @ViewState private var encrypt = true
     @ViewState private var pass1 = ""
     @ViewState private var pass2 = ""
     @ViewState private var changePassphrase = false
@@ -25,7 +26,9 @@ struct SyncSetupView: View {
     @ViewState private var accessError: String?
 
     private var hasSavedPassphrase: Bool { !Showcase.isOn && sync.passphrase != nil }
-    private var needsNewPassphrase: Bool { passwords && sessions && (!hasSavedPassphrase || changePassphrase) }
+    /// A passphrase is needed to encrypt the file and/or to sync passwords.
+    private var usesPassphrase: Bool { encrypt || (passwords && sessions) }
+    private var needsNewPassphrase: Bool { usesPassphrase && (!hasSavedPassphrase || changePassphrase) }
     private var passphraseOK: Bool { !needsNewPassphrase || (pass1.count >= 8 && pass1 == pass2) }
     private var allOn: Bool { sessions && passwords && settings && macros && tunnels }
     private var anyOn: Bool { sessions || settings || macros || tunnels }
@@ -47,7 +50,7 @@ struct SyncSetupView: View {
             Divider()
             buttons
         }
-        .frame(width: 600, height: 560)
+        .frame(width: 600, height: 660)
         .onAppear(perform: loadCurrent)
     }
 
@@ -152,10 +155,13 @@ struct SyncSetupView: View {
             item($sessions, "server.rack", .teal, "Sessions", "Servers, groups, colours, notes and folders")
             item($passwords, "key.fill", .orange, "Passwords", "Encrypted on this Mac with your sync passphrase before upload")
                 .disabled(!sessions)
-            if passwords && sessions { passphraseFields.padding(.leading, 30) }
             item($settings, "gearshape.fill", .gray, "Settings", "Theme, fonts, appearance, toolbar, files and status bar options")
             item($macros, "bolt.horizontal.fill", .mint, "Macros & Quick Commands", "Your saved commands, stars and folders")
             item($tunnels, "point.3.connected.trianglepath.dotted", .green, "Tunnels", "Saved SSH port forwards")
+            Divider()
+            item($encrypt, "lock.fill", .indigo, "Encrypt everything (recommended)",
+                 "The cloud drive only stores unreadable data: no server names, addresses, usernames or notes")
+            if usesPassphrase { passphraseFields.padding(.leading, 30) }
         }
     }
 
@@ -232,6 +238,7 @@ struct SyncSetupView: View {
         if settings { parts.append("Settings") }
         if macros { parts.append("Macros & Quick Commands") }
         if tunnels { parts.append("Tunnels") }
+        if encrypt { parts.append("all encrypted 🔒") }
         return parts.joined(separator: " · ")
     }
 
@@ -256,7 +263,7 @@ struct SyncSetupView: View {
                 }
             }
             Text("Syncing:  \(summaryOfChoices)").font(.callout)
-            Text("To add another Mac: install MacTerm+ there, open Sync → Set Up Sync, and choose the same drive\(passwords && sessions ? " and passphrase" : "").")
+            Text("To add another Mac: install MacTerm+ there, open Sync → Set Up Sync, and choose the same drive\(usesPassphrase ? " and passphrase" : "").")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if !sync.devices.isEmpty {
                 Text("Macs using this sync").font(.callout.weight(.semibold))
@@ -321,6 +328,7 @@ struct SyncSetupView: View {
                 ?? SyncLocation(provider: .custom, name: (sync.folderPath as NSString).lastPathComponent, url: URL(fileURLWithPath: sync.folderPath))
             sessions = sync.syncSessions; settings = sync.syncSettings; macros = sync.syncMacros; tunnels = sync.syncTunnels
             passwords = sync.syncPasswords || !sync.enabled
+            encrypt = sync.encryptAll || !sync.enabled
         } else {
             chosen = locations.first { $0.provider == .iCloud } ?? locations.first { $0.provider == .google }
         }
@@ -347,7 +355,7 @@ struct SyncSetupView: View {
                 try await Task.detached { try SyncManager.requestAccess(to: folder) }.value
                 await sync.finishSetup(folder: folder, sessions: sessions, passwords: passwords,
                                        passphrase: needsNewPassphrase ? pass1 : nil, settings: settings,
-                                       macros: macros, tunnels: tunnels)
+                                       macros: macros, tunnels: tunnels, encrypt: encrypt)
                 pass1 = ""; pass2 = ""; changePassphrase = false
                 working = false
                 step = .done

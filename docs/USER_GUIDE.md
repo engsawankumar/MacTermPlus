@@ -315,6 +315,10 @@ Checks whether a TCP port on any host can be reached from this Mac, and how fast
 
 ## Sync Across Macs
 
+### Encryption
+
+Turn on **Encrypt everything** (in the setup assistant, or Settings → Sync → Passphrase & encryption) and the cloud drive only holds an unreadable file (`sync-encrypted.mtpsync`, AES-256 with a key made from your sync passphrase): no server names, addresses, usernames, notes or settings can be read there. Use the same passphrase on every Mac; it stays in each Mac's Keychain and is never uploaded. A Mac without the passphrase, or with a wrong one, can't read the file and says so. Turning encryption on or off on one Mac applies to all your Macs. Older MacTerm+ versions can't read the encrypted file; if one writes an unencrypted file into the folder, the next up-to-date Mac merges it, encrypts it, deletes the readable copy and tells you to update.
+
 ### Set up
 
 Click **Sync** in the toolbar → **Set Up Sync…** (or Settings → Sync → Set Up Sync…). The assistant has three steps: **1. Where**: choose iCloud Drive or Google Drive (or another cloud folder). **2. What**: Sessions, Passwords, Settings, Macros & Quick Commands and Tunnels are all ticked; untick anything that should stay on this Mac only. Passwords need a sync passphrase, the same on every Mac. **3. Allow**: macOS asks whether MacTerm+ may use that drive; click Allow. MacTerm+ then syncs once and shows which Macs are connected. Run it on each Mac and pick the same drive. The first Mac shares its settings; Macs that join take the shared settings. You can change any choice later in Settings → Sync → What to sync.

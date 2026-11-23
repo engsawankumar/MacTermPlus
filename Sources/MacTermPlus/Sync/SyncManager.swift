@@ -83,6 +83,9 @@ struct SyncDocument: Codable {
     var settingsModified = Date.distantPast
     var identities: [Identity] = []
     var identitiesModified = Date.distantPast
+    /// Folder-wide choice: is the sync file encrypted? The newest choice wins on every Mac.
+    var encrypted = false
+    var encryptionModified = Date.distantPast
     var devices: [DeviceInfo] = []
     var vault: SecretVault?
 
@@ -106,6 +109,8 @@ struct SyncDocument: Codable {
         settingsModified = (try? c.decodeIfPresent(Date.self, forKey: .settingsModified)) ?? .distantPast
         identities = (try? c.decodeIfPresent([Identity].self, forKey: .identities)) ?? []
         identitiesModified = (try? c.decodeIfPresent(Date.self, forKey: .identitiesModified)) ?? .distantPast
+        encrypted = (try? c.decodeIfPresent(Bool.self, forKey: .encrypted)) ?? false
+        encryptionModified = (try? c.decodeIfPresent(Date.self, forKey: .encryptionModified)) ?? .distantPast
         devices = try c.decodeIfPresent([DeviceInfo].self, forKey: .devices) ?? []
         vault = try c.decodeIfPresent(SecretVault.self, forKey: .vault)
     }
@@ -143,9 +148,10 @@ struct SecretVault: Codable {
 }
 
 enum SyncError: LocalizedError {
-    case wrongPassphrase, noFolder, unavailable(String)
+    case wrongPassphrase, noFolder, needsPassphrase, unavailable(String)
     var errorDescription: String? {
         switch self {
+        case .needsPassphrase: return "This sync folder is encrypted. Enter your sync passphrase (the same one as on your other Macs) in Settings → Sync."
         case .wrongPassphrase: return "The sync passphrase doesn’t match the one used on your other devices."
         case .noFolder: return "Choose a sync folder first."
         case .unavailable(let m): return m
@@ -166,6 +172,26 @@ final class SyncManager: ObservableObject {
     @Published var syncSettings: Bool { didSet { d.set(syncSettings, forKey: "sync.settings") } }
     @Published var syncMacros: Bool { didSet { d.set(syncMacros, forKey: "sync.macros") } }
     @Published var syncTunnels: Bool { didSet { d.set(syncTunnels, forKey: "sync.tunnels") } }
+    /// Encrypt the whole sync file with the sync passphrase (nothing readable in the cloud drive).
+    @Published var encryptAll: Bool {
+        didSet {
+            d.set(encryptAll, forKey: "sync.encrypt")
+            guard encryptAll != oldValue else { return }
+            // This Mac's own choice. Whole seconds, like the dates in the sync file, so comparisons are exact.
+            if !adoptingEncryption { d.set(Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down)), forKey: "sync.encryptModified") }
+            scheduleSync(0.5)
+        }
+    }
+    private var adoptingEncryption = false
+    /// Takes the folder's choice (from another Mac) without counting it as a new choice here.
+    func adoptEncryption(_ on: Bool, at date: Date) {
+        adoptingEncryption = true
+        encryptAll = on
+        adoptingEncryption = false
+        d.set(date, forKey: "sync.encryptModified")
+    }
+    /// One-time information from the last sync (e.g. an old unencrypted file was cleaned up).
+    @Published var notice: String?
     /// True while synced settings are being applied (so that doesn't count as a local change).
     private var applyingSettings = false
 
@@ -192,6 +218,7 @@ final class SyncManager: ObservableObject {
         syncSettings = d.object(forKey: "sync.settings") as? Bool ?? true
         syncMacros = d.object(forKey: "sync.macros") as? Bool ?? true
         syncTunnels = d.object(forKey: "sync.tunnels") as? Bool ?? true
+        encryptAll = d.bool(forKey: "sync.encrypt")
         if let id = ProcessInfo.processInfo.environment["MTP_DEVICE_ID"] { deviceID = id }   // tests only
         else if let id = d.string(forKey: "sync.deviceID") { deviceID = id } else {
             deviceID = UUID().uuidString
@@ -295,9 +322,12 @@ final class SyncManager: ObservableObject {
         }
     }
 
-    /// Is there already a sync file (from another Mac) in this folder?
-    static func existingSync(in folder: URL) -> SyncDocument? {
-        read(folder.appendingPathComponent("MacTermPlus/sync.json"))
+    /// Is there already a sync file (from another Mac) in this folder? (`encrypted` tells which kind.)
+    static func existingSync(in folder: URL) -> (exists: Bool, encrypted: Bool) {
+        let dir = folder.appendingPathComponent("MacTermPlus")
+        let files = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+        let enc = files.contains(where: EncryptedSyncFile.isEncryptedCopy)
+        return (enc || files.contains(where: EncryptedSyncFile.isPlainCopy), enc)
     }
 
     /// Creates the MacTermPlus folder and a test file in the cloud folder. This is what makes macOS
@@ -318,9 +348,10 @@ final class SyncManager: ObservableObject {
 
     /// Finishes the setup assistant: saves the choices, turns sync on and syncs once.
     func finishSetup(folder: URL, sessions: Bool, passwords: Bool, passphrase: String?, settings: Bool,
-                     macros: Bool, tunnels: Bool) async {
+                     macros: Bool, tunnels: Bool, encrypt: Bool) async {
         guard !Showcase.isOn else { return }   // screenshots never change the real setup
-        let joining = Self.existingSync(in: folder) != nil
+        let existing = Self.existingSync(in: folder)
+        let joining = existing.exists
         folderPath = folder.path
         syncSessions = sessions
         syncSettings = settings
@@ -328,6 +359,11 @@ final class SyncManager: ObservableObject {
         syncTunnels = tunnels
         if let passphrase, !passphrase.isEmpty { self.passphrase = passphrase }
         syncPasswords = passwords && sessions && self.passphrase != nil
+        if existing.encrypted {
+            adoptEncryption(true, at: .distantPast)   // an encrypted folder stays encrypted
+        } else {
+            encryptAll = encrypt && self.passphrase != nil
+        }
         // The first Mac shares its settings; Macs that join take the shared ones.
         if !joining { d.set(Date(), forKey: "sync.settingsModified") }
         enabled = true
@@ -336,10 +372,18 @@ final class SyncManager: ObservableObject {
     }
 
     func removeDevice(_ device: DeviceInfo) {
-        guard let file = syncFile, var doc = Self.read(file) else { return }
-        doc.devices.removeAll { $0.id == device.id }
-        try? Self.write(doc, to: file)
-        devices = doc.devices
+        guard let file = syncFile else { return }
+        let encURL = file.deletingLastPathComponent().appendingPathComponent(EncryptedSyncFile.fileName)
+        if let f = Self.readEncrypted(encURL) {
+            guard let pass = passphrase, var doc = try? f.open(passphrase: pass) else { return }
+            doc.devices.removeAll { $0.id == device.id }
+            if let sealed = try? EncryptedSyncFile.seal(doc, passphrase: pass, salt: f.salt) { try? Self.writeEncrypted(sealed, to: encURL) }
+            devices = doc.devices
+        } else if var doc = Self.read(file) {
+            doc.devices.removeAll { $0.id == device.id }
+            try? Self.write(doc, to: file)
+            devices = doc.devices
+        }
     }
 
     // MARK: Engine
@@ -354,6 +398,27 @@ final class SyncManager: ObservableObject {
             result = try? dec.decode(SyncDocument.self, from: data)
         }
         return result
+    }
+
+    private static func readEncrypted(_ url: URL) -> EncryptedSyncFile? {
+        var result: EncryptedSyncFile?
+        var err: NSError?
+        NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &err) { u in
+            guard let data = try? Data(contentsOf: u) else { return }
+            result = try? JSONDecoder().decode(EncryptedSyncFile.self, from: data)
+        }
+        return result
+    }
+
+    private static func writeEncrypted(_ file: EncryptedSyncFile, to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let data = try JSONEncoder().encode(file)
+        var err: NSError?
+        var writeError: Error?
+        NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &err) { u in
+            do { try data.write(to: u, options: .atomic) } catch { writeError = error }
+        }
+        if let e = err ?? writeError { throw e }
     }
 
     private static func write(_ doc: SyncDocument, to url: URL) throws {
@@ -381,14 +446,24 @@ final class SyncManager: ObservableObject {
         for item in (try? fm.contentsOfDirectory(atPath: dir.path)) ?? [] where item.hasSuffix(".icloud") {
             try? fm.startDownloadingUbiquitousItem(at: dir.appendingPathComponent(item))
         }
-        let copies = ((try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? [])
-            .filter { $0.lastPathComponent.hasPrefix("sync") && $0.pathExtension == "json" }
+        let all = (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+        let plainCopies = all.filter(EncryptedSyncFile.isPlainCopy)       // sync.json, "sync 2.json", …
+        let encCopies = all.filter(EncryptedSyncFile.isEncryptedCopy)     // sync-encrypted.mtpsync (+ conflict copies)
         var remote = SyncDocument()
-        var conflictCopies: [URL] = []
-        for url in copies {
+        var salt: String?
+        if !encCopies.isEmpty {
+            guard let pass = manager.passphrase else { throw SyncError.needsPassphrase }
+            for url in encCopies {
+                guard let f = readEncrypted(url) else { continue }
+                remote = merge(remote, try f.open(passphrase: pass))
+                if url.lastPathComponent == EncryptedSyncFile.fileName || salt == nil { salt = f.salt }
+            }
+        }
+        var plainFound = false
+        for url in plainCopies {
             guard let doc = read(url) else { continue }
             remote = merge(remote, doc)
-            if url.lastPathComponent != "sync.json" { conflictCopies.append(url) }
+            plainFound = true
         }
 
         // Local state as a document.
@@ -405,6 +480,8 @@ final class SyncManager: ObservableObject {
         local.quickCommandsModified = ud.object(forKey: "sync.quickCommandsModified") as? Date ?? .distantPast
         local.settings = AppSettings.shared.syncSnapshot()
         local.settingsModified = ud.object(forKey: "sync.settingsModified") as? Date ?? .distantPast
+        local.encrypted = manager.encryptAll
+        local.encryptionModified = ud.object(forKey: "sync.encryptModified") as? Date ?? .distantPast
         local.identities = IdentityStore.shared.identities
         local.identitiesModified = ud.object(forKey: "sync.identitiesModified") as? Date ?? .distantPast
         // Items this Mac doesn't sync: leave the cloud copy as it is and don't take it either.
@@ -420,6 +497,12 @@ final class SyncManager: ObservableObject {
         if !manager.syncSettings { local.settings = nil; local.settingsModified = .distantPast }
 
         var merged = merge(remote, local)
+        // Another Mac changed the encryption choice more recently (or at the same moment, choosing encryption): follow it.
+        if merged.encryptionModified > local.encryptionModified
+            || (merged.encryptionModified == local.encryptionModified && merged.encrypted && !local.encrypted) {
+            manager.adoptEncryption(merged.encrypted, at: merged.encryptionModified)
+        }
+        merged.encrypted = manager.encryptAll
         let before = Set(store.sessions.map(\.id))
         let after = Set(merged.sessions.map(\.id))
 
@@ -465,8 +548,21 @@ final class SyncManager: ObservableObject {
         merged.devices.sort { $0.lastSync > $1.lastSync }
         merged.updated = Date()
 
-        try write(merged, to: file)
-        for c in conflictCopies { try? fm.removeItem(at: c) }
+        if manager.encryptAll {
+            guard let pass = manager.passphrase else { throw SyncError.needsPassphrase }
+            let sealed = try EncryptedSyncFile.seal(merged, passphrase: pass, salt: salt)
+            try writeEncrypted(sealed, to: dir.appendingPathComponent(EncryptedSyncFile.fileName))
+            for c in encCopies where c.lastPathComponent != EncryptedSyncFile.fileName { try? fm.removeItem(at: c) }
+            // No readable copy may stay behind in the cloud drive.
+            for c in plainCopies { try? fm.removeItem(at: c) }
+            if plainFound && !encCopies.isEmpty {
+                manager.notice = "A Mac with an older MacTerm+ wrote an unencrypted sync file. It was merged, encrypted and removed. Update MacTerm+ on all your Macs."
+            }
+        } else {
+            try write(merged, to: file)
+            for c in plainCopies where c.lastPathComponent != EncryptedSyncFile.plainName { try? fm.removeItem(at: c) }
+            for c in encCopies { try? fm.removeItem(at: c) }   // encryption was turned off: drop the old encrypted copy
+        }
 
         // Apply to this Mac.
         let tomb = Dictionary(uniqueKeysWithValues: merged.deleted.compactMap { k, v in UUID(uuidString: k).map { ($0, v) } })
@@ -532,6 +628,11 @@ final class SyncManager: ObservableObject {
         } else {
             out.quickCommands = b.quickCommands; out.quickFolders = b.quickFolders; out.quickCommandsModified = b.quickCommandsModified
         }
+        if a.encryptionModified == b.encryptionModified {
+            out.encrypted = a.encrypted || b.encrypted   // a tie keeps the data encrypted
+            out.encryptionModified = a.encryptionModified
+        } else if a.encryptionModified > b.encryptionModified { out.encrypted = a.encrypted; out.encryptionModified = a.encryptionModified }
+        else { out.encrypted = b.encrypted; out.encryptionModified = b.encryptionModified }
         if a.identitiesModified >= b.identitiesModified { out.identities = a.identities; out.identitiesModified = a.identitiesModified }
         else { out.identities = b.identities; out.identitiesModified = b.identitiesModified }
         if a.settingsModified >= b.settingsModified { out.settings = a.settings ?? b.settings; out.settingsModified = a.settingsModified }

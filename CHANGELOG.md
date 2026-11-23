@@ -3,6 +3,16 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.4.0
+- **Encrypt everything in sync**: with one switch (on by default in the setup assistant) the sync file in
+  iCloud Drive or Google Drive is fully encrypted with your sync passphrase (AES-256). Server names,
+  addresses, usernames, notes, settings and passwords are no longer readable in the cloud drive.
+- Settings → Sync has a new **Passphrase & encryption** section.
+- Turning encryption on or off applies to all your Macs. A Mac without the passphrase (or with a wrong one)
+  can't read the data and says so.
+- Safe with older versions: they can't read or overwrite the encrypted file. If one writes an unencrypted file,
+  it is merged, encrypted and removed, and you're asked to update that Mac.
+
 ## 1.3.2
 Security hardening:
 - New SSH key passphrases are typed into ssh-keygen privately instead of being passed on its command

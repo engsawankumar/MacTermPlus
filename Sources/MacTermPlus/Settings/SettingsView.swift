@@ -409,22 +409,26 @@ private struct SyncSettings: View {
                 Toggle("Macros & Quick Commands", isOn: $sync.syncMacros)
                 Toggle("Tunnels", isOn: $sync.syncTunnels)
             }
-            Section("Passwords") {
-                Toggle("Also sync saved passwords (end-to-end encrypted)", isOn: $sync.syncPasswords)
-                if sync.syncPasswords {
-                    HStack {
-                        SecureField("Sync passphrase", text: $passphrase, prompt: Text(sync.passphrase == nil ? "Choose a passphrase" : "•••••••• (saved)"))
-                        Button("Save") {
-                            sync.passphrase = passphrase
-                            passphrase = ""
-                            passphraseSaved = true
-                            sync.scheduleSync(0.2)
-                        }
-                        .disabled(passphrase.count < 8)
+            Section("Passphrase & encryption") {
+                HStack {
+                    SecureField("Sync passphrase", text: $passphrase, prompt: Text(sync.passphrase == nil ? "Choose a passphrase (8+ characters)" : "•••••••• (saved)"))
+                    Button(sync.passphrase == nil ? "Save" : "Change") {
+                        sync.passphrase = passphrase
+                        passphrase = ""
+                        passphraseSaved = true
+                        sync.scheduleSync(0.2)
                     }
-                    Text("Use the same passphrase on every Mac (at least 8 characters). Passwords are encrypted with it (AES-256) before they reach the cloud folder; the passphrase stays in this Mac’s Keychain and is never uploaded.")
-                        .font(.caption).foregroundStyle(.secondary)
-                    if passphraseSaved { Label("Passphrase saved", systemImage: "checkmark").font(.caption).foregroundStyle(.green) }
+                    .disabled(passphrase.count < 8)
+                }
+                if passphraseSaved { Label("Passphrase saved", systemImage: "checkmark").font(.caption).foregroundStyle(.green) }
+                Toggle("Encrypt everything in the sync file (recommended)", isOn: $sync.encryptAll)
+                    .disabled(sync.passphrase == nil && !sync.encryptAll)
+                Toggle("Also sync saved passwords", isOn: $sync.syncPasswords)
+                    .disabled(sync.passphrase == nil && !sync.syncPasswords)
+                Text("Use the same passphrase on every Mac. It stays in this Mac’s Keychain and is never uploaded. With encryption on, your cloud drive only holds unreadable data (AES-256): no server names, addresses, usernames or notes. If you forget the passphrase, set up sync again with a new one.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let n = sync.notice {
+                    Label(n, systemImage: "info.circle.fill").font(.callout).foregroundStyle(.orange)
                 }
             }
             Section("Status") {
