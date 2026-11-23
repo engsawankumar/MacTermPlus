@@ -7,8 +7,10 @@ APP="dist/MacTerm+.app"
 VERSION="${VERSION:-$(cat VERSION 2>/dev/null || echo 0.1.0)}"
 GITHUB_REPO="${GITHUB_REPO:-$(grep -E '^GITHUB_REPO=' release.config 2>/dev/null | cut -d= -f2)}"
 
-swift build -c release --arch arm64
-BIN="$(swift build -c release --arch arm64 --show-bin-path)/MacTermPlus"
+# Replace this Mac's folder path in the binary (compilers embed source paths for error messages).
+PREFIX_MAP=(-Xswiftc -file-prefix-map -Xswiftc "$PWD=MacTermPlus" -Xcc "-ffile-prefix-map=$PWD=MacTermPlus")
+swift build -c release --arch arm64 "${PREFIX_MAP[@]}"
+BIN="$(swift build -c release --arch arm64 "${PREFIX_MAP[@]}" --show-bin-path)/MacTermPlus"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

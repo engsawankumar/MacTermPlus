@@ -556,6 +556,7 @@ private struct KeychainSettings: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try SessionExporter.export(store.sessions, as: .applePasswords).write(to: url, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)   // holds passwords
             message = "Saved \(url.lastPathComponent). Now: Passwords → File → Import Passwords… → choose it. Then delete the file."
         } catch {
             message = error.localizedDescription

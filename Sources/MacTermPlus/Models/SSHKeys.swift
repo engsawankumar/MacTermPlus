@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import SwiftTerm
 
 /// An SSH private key found on this Mac. Only the key's header is inspected; MacTerm+ never copies,
 /// uploads or syncs private keys — sessions and identities store just the file path.
@@ -102,14 +103,49 @@ enum SSHKeys {
         let path = sshDir + "/" + clean
         if FileManager.default.fileExists(atPath: path) { return "\(clean) already exists. Choose another name." }
         try? FileManager.default.createDirectory(atPath: sshDir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/ssh-keygen")
-        p.arguments = ["-q", "-t", "ed25519", "-a", "100", "-f", path, "-N", passphrase, "-C", comment]
-        p.standardOutput = FileHandle.nullDevice
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return error.localizedDescription }
-        p.waitUntilExit()
-        return p.terminationStatus == 0 ? nil : "ssh-keygen failed (exit \(p.terminationStatus))."
+        return runKeygen(["-q", "-t", "ed25519", "-a", "100", "-f", path, "-C", comment], passphrase: passphrase)
+    }
+
+    /// Runs ssh-keygen in a private pseudo-terminal and types the passphrase at its prompts, so the
+    /// passphrase never appears on a command line (where other programs could see it with `ps`).
+    static func runKeygen(_ args: [String], passphrase: String) -> String? {
+        var size = winsize(ws_row: 24, ws_col: 80, ws_xpixel: 0, ws_ypixel: 0)
+        guard let (pid, fd) = PseudoTerminalHelpers.fork(andExec: "/usr/bin/ssh-keygen", args: ["ssh-keygen"] + args,
+                                                         env: ["PATH=/usr/bin:/bin", "LANG=C"], desiredWindowSize: &size) else {
+            return "Couldn’t start ssh-keygen."
+        }
+        defer { close(fd) }
+        var seen = ""
+        var answered = 0
+        let deadline = Date().addingTimeInterval(30)
+        var buf = [UInt8](repeating: 0, count: 1024)
+        while Date() < deadline {
+            var pfd = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+            if poll(&pfd, 1, 200) > 0 {
+                let n = read(fd, &buf, buf.count)
+                if n <= 0 {   // ssh-keygen finished and closed its terminal
+                    var status: Int32 = 0
+                    waitpid(pid, &status, 0)
+                    return (status >> 8) & 0xff == 0 && answered >= 2 ? nil : "ssh-keygen failed."
+                }
+                seen += String(decoding: buf[0..<n], as: UTF8.self).lowercased()
+                // "Enter passphrase …:" then "Enter same passphrase again:"
+                let prompts = seen.components(separatedBy: "passphrase").count - 1
+                if prompts > answered && seen.hasSuffix(": ") || (prompts > answered && seen.hasSuffix(":")) {
+                    let line = Array((passphrase + "\n").utf8)
+                    _ = line.withUnsafeBufferPointer { write(fd, $0.baseAddress, $0.count) }
+                    answered += 1
+                }
+            }
+            var status: Int32 = 0
+            if waitpid(pid, &status, WNOHANG) == pid {
+                return (status >> 8) & 0xff == 0 && answered >= 2 ? nil : "ssh-keygen failed."
+            }
+        }
+        kill(pid, SIGKILL)
+        var status: Int32 = 0
+        waitpid(pid, &status, 0)
+        return "ssh-keygen didn’t finish."
     }
 
     /// True when a session or identity path points to this key.

@@ -524,25 +524,12 @@ private struct KeyGenerator: View {
     }
 
     private func generate() {
-        let dir = NSHomeDirectory() + "/.ssh"
-        let path = dir + "/" + name.replacingOccurrences(of: "/", with: "")
-        if FileManager.default.fileExists(atPath: path) {
-            result = "⚠️ \(path) already exists — choose another name."
-            return
-        }
-        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true,
-                                                 attributes: [.posixPermissions: 0o700])
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/ssh-keygen")
-        p.arguments = ["-q", "-t", "ed25519", "-f", path, "-N", passphrase, "-C", comment]
-        do {
-            try p.run()
-            p.waitUntilExit()
-            result = p.terminationStatus == 0
-                ? "✅ Created \(path) and \(path).pub"
-                : "ssh-keygen failed (exit \(p.terminationStatus))."
-        } catch {
-            result = error.localizedDescription
+        let clean = name.replacingOccurrences(of: "/", with: "")
+        if let e = SSHKeys.generate(name: clean, comment: comment, passphrase: passphrase) {
+            result = "⚠️ " + e
+        } else {
+            result = "✅ Created ~/.ssh/\(clean) and ~/.ssh/\(clean).pub"
+            passphrase = ""
         }
     }
 }

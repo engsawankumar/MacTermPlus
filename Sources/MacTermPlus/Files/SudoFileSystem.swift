@@ -110,7 +110,8 @@ final class SudoFileSystem: RemoteFileSystem, @unchecked Sendable {
 
     func upload(_ local: URL, to remotePath: String, progress: @escaping @Sendable (UInt64) -> Void) async throws {
         let tmp = "/tmp/.macterm-upload-\(UUID().uuidString)"
-        try await sftp.upload(local, to: tmp, progress: progress)
+        // Readable only by you while it waits to be moved into place (other server users can't peek).
+        try await sftp.upload(local, to: tmp, createMode: 0o600, progress: progress)
         do {
             // Keep an existing file's owner and mode; new files get root's defaults.
             try await run("sh -c " + Self.quote(

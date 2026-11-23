@@ -25,6 +25,8 @@ final class RemoteFileBrowser: ObservableObject {
     let title: String
     let queue = TransferQueue()
     private var editWatchers: [RemoteEditWatcher] = []
+    /// Local copies of server files opened for editing; deleted when the tab closes.
+    private var editDirs: [URL] = []
     private var started = false
 
     init(fs: RemoteFileSystem, title: String) {
@@ -224,7 +226,8 @@ final class RemoteFileBrowser: ObservableObject {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("MacTermPlus-edit", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        do { try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true) } catch {
+        editDirs.append(dir)
+        do { try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]) } catch {
             errorMessage = error.localizedDescription
             return
         }
@@ -252,6 +255,8 @@ final class RemoteFileBrowser: ObservableObject {
     func stop() {
         editWatchers.forEach { $0.stop() }
         editWatchers.removeAll()
+        for d in editDirs { try? FileManager.default.removeItem(at: d) }
+        editDirs.removeAll()
         fs.close()
     }
 }

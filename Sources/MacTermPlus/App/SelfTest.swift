@@ -15,6 +15,30 @@ enum SelfTest {
             try? HelpContent.markdown().write(toFile: args[h + 1], atomically: true, encoding: .utf8)
             exit(0)
         }
+        if let k = args.firstIndex(of: "--keygen-test"), args.count > k + 2 {
+            // Tests: MacTermPlus --keygen-test <new key path> <passphrase>
+            print("KEYGEN \(SSHKeys.runKeygen(["-q", "-t", "ed25519", "-a", "16", "-f", args[k + 1], "-C", "test"], passphrase: args[k + 2]) ?? "ok")")
+            exit(0)
+        }
+        if let k = args.firstIndex(of: "--private-upload-test"), args.count > k + 5 {
+            // Tests: MacTermPlus --private-upload-test host port user keyPath remotePath
+            let done = DispatchSemaphore(value: 0)
+            Task { @MainActor in
+                var p = SessionProfile(name: "t", host: args[k + 1], port: Int(args[k + 2]) ?? 22, username: args[k + 3])
+                p.auth = .privateKey; p.keyPath = args[k + 4]
+                let conn = SSHConnection(profile: p, secret: nil)
+                let src = FileManager.default.temporaryDirectory.appendingPathComponent("mtp-up-\(UUID().uuidString)")
+                try? Data("private content".utf8).write(to: src)
+                do {
+                    try await SFTPFileSystem(connection: conn).upload(src, to: args[k + 5], createMode: 0o600) { _ in }
+                    print("UPLOAD ok")
+                } catch { print("UPLOAD error \(error)") }
+                try? FileManager.default.removeItem(at: src)
+                done.signal()
+            }
+            while done.wait(timeout: .now() + 0.05) == .timedOut { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            exit(0)
+        }
         if let k = args.firstIndex(of: "--key-inspect") {
             // Tests: MacTermPlus --key-inspect <private key files…>
             for p in args[(k + 1)...] {

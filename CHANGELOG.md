@@ -3,6 +3,18 @@
 Release notes are taken from this file: the section under `## <version>` becomes the GitHub
 release description that users see in **Check for Updates**.
 
+## 1.3.2
+Security hardening:
+- New SSH key passphrases are typed into ssh-keygen privately instead of being passed on its command
+  line, where other programs on the Mac could have seen them.
+- Root (sudo) uploads use a temporary file on the server that only you can read.
+- MacTerm+'s data folder and files (sessions, known hosts, identities…) are now readable only by you.
+- Exported files that contain passwords are saved readable only by you.
+- Local copies of server files you opened for editing are deleted when the tab closes.
+- Shown passwords are never spell-checked or auto-corrected.
+- Release builds no longer contain the build Mac's folder paths.
+- Clearer warning that plain FTP sends passwords unencrypted.
+
 ## 1.3.1
 - **License & terms on first launch**: MacTerm+ now shows its license and terms of use once (and again only if
   they change). Tick “I have read and accept…” and click Accept & Continue to start, or Quit.

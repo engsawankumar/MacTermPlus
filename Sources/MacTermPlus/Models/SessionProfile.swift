@@ -31,7 +31,7 @@ enum SessionKind: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .ssh: return "Terminal + file browser"
         case .sftp: return "Files only, over SSH"
-        case .ftp: return "Files, unencrypted"
+        case .ftp: return "Files, unencrypted: the password and files travel in plain text. Use SFTP or FTPS when the server supports it."
         case .ftps: return "Files, FTP over TLS"
         }
     }
@@ -277,7 +277,21 @@ enum AppPaths {
         }
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let dir = base.appendingPathComponent("MacTermPlus", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         return dir
+    }
+
+    /// Makes the data folder and its files readable only by you (sessions, known hosts, identities…).
+    static func harden() {
+        let fm = FileManager.default
+        let dir = supportDirectory
+        try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        for f in (try? fm.contentsOfDirectory(atPath: dir.path)) ?? [] {
+            let p = dir.appendingPathComponent(f).path
+            var isDir: ObjCBool = false
+            if fm.fileExists(atPath: p, isDirectory: &isDir) {
+                try? fm.setAttributes([.posixPermissions: isDir.boolValue ? 0o700 : 0o600], ofItemAtPath: p)
+            }
+        }
     }
 }

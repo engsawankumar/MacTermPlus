@@ -14,6 +14,7 @@ struct MacTermPlusApp: App {
             handler.logLevel = .warning
             return handler
         }
+        AppPaths.harden()
         SelfTest.runIfRequested()
     }
 

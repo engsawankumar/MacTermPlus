@@ -54,6 +54,7 @@ struct ExportSessionsView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try SessionExporter.export(store.sessions, as: format).write(to: url, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)   // may hold passwords
             done = "Saved \(url.lastPathComponent)"
         } catch {
             done = nil

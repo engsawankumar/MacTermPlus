@@ -242,11 +242,13 @@ final class Updater: ObservableObject {
 
     /// A tiny helper script waits for this process to quit, swaps the app bundle (keeping a backup
     /// until the copy succeeds), and opens the new version.
+    private static func shellQuote(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+
     private func relaunch(replacing current: URL, with newApp: URL) throws {
         let script = """
         #!/bin/sh
         while /bin/kill -0 \(ProcessInfo.processInfo.processIdentifier) 2>/dev/null; do sleep 0.3; done
-        OLD="\(current.path)"; NEW="\(newApp.path)"; BAK="$OLD.updating-backup"
+        OLD=\(Self.shellQuote(current.path)); NEW=\(Self.shellQuote(newApp.path)); BAK="$OLD.updating-backup"
         rm -rf "$BAK"
         if mv "$OLD" "$BAK" && /usr/bin/ditto "$NEW" "$OLD"; then
           rm -rf "$BAK"

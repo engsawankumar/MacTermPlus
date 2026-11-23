@@ -98,9 +98,16 @@ final class SFTPFileSystem: RemoteFileSystem, @unchecked Sendable {
     }
 
     func upload(_ local: URL, to remotePath: String, progress: @escaping @Sendable (UInt64) -> Void) async throws {
+        try await upload(local, to: remotePath, createMode: nil, progress: progress)
+    }
+
+    /// Upload; `createMode` sets the permissions of a newly created file (e.g. 0o600 for private temp files).
+    func upload(_ local: URL, to remotePath: String, createMode: UInt32?, progress: @escaping @Sendable (UInt64) -> Void) async throws {
         let handle = try FileHandle(forReadingFrom: local)
         defer { try? handle.close() }
-        try await sftp().withFile(filePath: remotePath, flags: [.write, .create, .truncate]) { file in
+        var attrs = SFTPFileAttributes.none
+        attrs.permissions = createMode
+        try await sftp().withFile(filePath: remotePath, flags: [.write, .create, .truncate], attributes: attrs) { file in
             var offset: UInt64 = 0
             while let data = try handle.read(upToCount: TransferQueue.chunkSize), !data.isEmpty {
                 try await file.write(ByteBuffer(bytes: data), at: offset)

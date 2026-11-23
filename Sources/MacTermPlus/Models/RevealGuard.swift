@@ -76,6 +76,7 @@ struct RevealableSecretField: View {
             Group {
                 if visible {
                     TextField(title, text: $text, prompt: Text(prompt)).font(.body.monospaced())
+                        .autocorrectionDisabled()
                 } else {
                     SecureField(title, text: $text, prompt: Text(prompt))
                 }
